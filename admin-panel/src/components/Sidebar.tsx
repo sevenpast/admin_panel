@@ -30,7 +30,6 @@ const navigationItems = [
   { name: 'Staff', href: '/staff', icon: UserGroupIcon },
   { name: 'Inventory', href: '/inventory', icon: CubeIcon },
   { name: 'Alert Management', href: '/alerts', icon: BellIcon },
-  { name: 'Shifts', href: '/shifts', icon: ClockIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
   { name: 'Reports', href: '/reports', icon: DocumentChartBarIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },

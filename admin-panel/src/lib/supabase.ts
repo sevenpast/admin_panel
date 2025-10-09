@@ -6,14 +6,25 @@ export function createClient() {
 
   // Check if we have valid Supabase configuration
   if (!supabaseUrl || !supabaseKey || supabaseUrl === 'your_supabase_url_here' || supabaseKey === 'your_supabase_anon_key_here') {
-    // Return a mock client for development when Supabase is not configured
+    // Return a comprehensive mock client for development when Supabase is not configured
+    const mockQueryBuilder = {
+      select: () => mockQueryBuilder,
+      insert: () => mockQueryBuilder,
+      update: () => mockQueryBuilder,
+      delete: () => mockQueryBuilder,
+      eq: () => mockQueryBuilder,
+      gte: () => mockQueryBuilder,
+      lte: () => mockQueryBuilder,
+      gt: () => mockQueryBuilder,
+      lt: () => mockQueryBuilder,
+      order: () => mockQueryBuilder,
+      limit: () => mockQueryBuilder,
+      single: () => Promise.resolve({ data: null, error: null }),
+      then: (resolve: any) => resolve({ data: [], error: null })
+    }
+
     return {
-      from: () => ({
-        select: () => Promise.resolve({ data: [], error: null }),
-        insert: () => Promise.resolve({ data: [], error: null }),
-        update: () => Promise.resolve({ data: [], error: null }),
-        delete: () => Promise.resolve({ data: [], error: null })
-      }),
+      from: () => mockQueryBuilder,
       auth: {
         getUser: () => Promise.resolve({ data: { user: null }, error: null }),
         signOut: () => Promise.resolve({ error: null })

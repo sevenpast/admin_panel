@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ArrowLeftIcon, ArrowRightIcon, HomeIcon, EyeIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ArrowRightIcon, HomeIcon, EyeIcon, XMarkIcon, PlusIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/outline'
 
 // Interfaces based on user stories and database schemas
 interface SurfLesson {
@@ -42,9 +42,40 @@ interface Meal {
 }
 
 // Calendar item interface for unified rendering
+// Shift interfaces for shift calendar
+interface Staff {
+  id: string
+  staff_id: string
+  name: string
+  labels: string[]
+  is_active: boolean
+  mobile_number?: string
+  image_url?: string
+  color?: string
+}
+
+interface Shift {
+  id: string
+  shift_id: string
+  camp_id: string
+  staff_id: string
+  staff_name: string
+  role_label: 'host' | 'teacher' | 'instructor' | 'kitchen' | 'maintenance' | 'other'
+  start_at: string
+  end_at: string
+  color?: string
+  recurrence_rule?: string
+  recurrence_parent_id?: string
+  notes?: string
+  is_active: boolean
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
 interface CalendarItem {
   id: string
-  type: 'lesson' | 'event' | 'meal'
+  type: 'lesson' | 'event' | 'meal' | 'shift'
   title: string
   start_at: string
   end_at: string
@@ -57,6 +88,9 @@ interface CalendarItem {
     instructors?: string[]
     assigned_staff?: string[]
     status?: string
+    staff_name?: string
+    role?: string
+    notes?: string
   }
 }
 
@@ -140,11 +174,77 @@ const mockMeals: Meal[] = [
   }
 ]
 
+// Mock data for staff
+const mockStaff: Staff[] = [
+  {
+    id: '1',
+    staff_id: 'S-A1B2C3D4E5',
+    name: 'Max Mustermann',
+    labels: ['instructor', 'host'],
+    is_active: true,
+    mobile_number: '+49123456789',
+    color: '#22C55E'
+  },
+  {
+    id: '2',
+    staff_id: 'S-F6G7H8I9J0',
+    name: 'Anna Schmidt',
+    labels: ['kitchen', 'other'],
+    is_active: true,
+    mobile_number: '+49987654321',
+    color: '#3B82F6'
+  },
+  {
+    id: '3',
+    staff_id: 'S-K1L2M3N4O5',
+    name: 'Tom Wilson',
+    labels: ['teacher', 'instructor'],
+    is_active: true,
+    mobile_number: '+49555123456',
+    color: '#8B5CF6'
+  }
+]
+
+// Mock shifts data
+const mockShifts: Shift[] = [
+  {
+    id: '1',
+    shift_id: 'H-A1B2C3D4E5',
+    camp_id: 'camp-1',
+    staff_id: '1',
+    staff_name: 'Max Mustermann',
+    role_label: 'host',
+    start_at: new Date(new Date().setHours(8, 0, 0, 0)).toISOString(),
+    end_at: new Date(new Date().setHours(12, 0, 0, 0)).toISOString(),
+    color: '#22C55E',
+    notes: 'Morning reception and guest check-ins',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: '2',
+    shift_id: 'H-F6G7H8I9J0',
+    camp_id: 'camp-1',
+    staff_id: '1',
+    staff_name: 'Max Mustermann',
+    role_label: 'instructor',
+    start_at: new Date(new Date().setHours(14, 0, 0, 0)).toISOString(),
+    end_at: new Date(new Date().setHours(18, 0, 0, 0)).toISOString(),
+    color: '#22C55E',
+    notes: 'Afternoon surf lesson instruction',
+    is_active: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }
+]
+
 // Color scheme constants
 const COLORS = {
   lesson: '#22C55E',    // Green
   event: '#8B5CF6',     // Purple/Violet
-  meal: '#F59E0B'       // Orange
+  meal: '#F59E0B',      // Orange
+  shift: '#EF4444'      // Red
 }
 
 // Utility functions
@@ -196,7 +296,8 @@ const convertToCalendarItems = (
   lessons: SurfLesson[],
   events: Event[],
   meals: Meal[],
-  filters: { lessons: boolean; events: boolean; meals: boolean }
+  shifts: Shift[],
+  filters: { lessons: boolean; events: boolean; meals: boolean; shifts: boolean }
 ): CalendarItem[] => {
   const items: CalendarItem[] = []
 
@@ -264,12 +365,36 @@ const convertToCalendarItems = (
     })
   }
 
+  // Add shifts (only active)
+  if (filters.shifts) {
+    shifts.filter(s => s.is_active).forEach(shift => {
+      items.push({
+        id: shift.id,
+        type: 'shift',
+        title: shift.staff_name,
+        start_at: shift.start_at,
+        end_at: shift.end_at,
+        location: 'Work',
+        color: shift.color || COLORS.shift,
+        meta: {
+          id: shift.shift_id,
+          category: shift.role_label,
+          staff_name: shift.staff_name,
+          role: shift.role_label,
+          notes: shift.notes,
+          status: 'Active'
+        }
+      })
+    })
+  }
+
   return items
 }
 
 export default function CalendarPage() {
   const [currentWeek, setCurrentWeek] = useState(new Date())
-  const [filters, setFilters] = useState({ lessons: true, events: true, meals: true })
+  const [activeTab, setActiveTab] = useState<'shifts' | 'camp'>('camp')
+  const [filters, setFilters] = useState({ lessons: true, events: true, meals: true, shifts: true })
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null)
   const [showTooltip, setShowTooltip] = useState(false)
   const [nowLinePosition, setNowLinePosition] = useState(getCurrentTimePosition())
@@ -286,20 +411,31 @@ export default function CalendarPage() {
   const weekRange = getWeekDateRange(currentWeek)
   const weekDays = getWeekDays(weekRange.start)
 
-  // Get calendar items for the current week
-  const allItems = convertToCalendarItems(mockLessons, mockEvents, mockMeals, filters)
+  // Get calendar items for the current week based on active tab
+  const currentFilters = activeTab === 'shifts'
+    ? { lessons: false, events: false, meals: false, shifts: true }
+    : { lessons: filters.lessons, events: filters.events, meals: filters.meals, shifts: false }
+
+  const allItems = convertToCalendarItems(mockLessons, mockEvents, mockMeals, mockShifts, currentFilters)
   const weekItems = allItems.filter(item => {
     const itemDate = new Date(item.start_at)
     return itemDate >= weekRange.start && itemDate <= weekRange.end
   })
 
   // Calculate KPIs for the current week
-  const weekKPIs = {
-    events: weekItems.filter(item => item.type === 'event').length,
-    lessons: weekItems.filter(item => item.type === 'lesson').length,
-    meals: weekItems.filter(item => item.type === 'meal').length,
-    total: weekItems.length
-  }
+  const weekKPIs = activeTab === 'shifts'
+    ? {
+        shifts: weekItems.filter(item => item.type === 'shift').length,
+        host: weekItems.filter(item => item.type === 'shift' && item.meta.role === 'host').length,
+        instructor: weekItems.filter(item => item.type === 'shift' && item.meta.role === 'instructor').length,
+        total: weekItems.length
+      }
+    : {
+        events: weekItems.filter(item => item.type === 'event').length,
+        lessons: weekItems.filter(item => item.type === 'lesson').length,
+        meals: weekItems.filter(item => item.type === 'meal').length,
+        total: weekItems.length
+      }
 
   const navigateWeek = (direction: 'prev' | 'next') => {
     const newWeek = new Date(currentWeek)
@@ -378,7 +514,7 @@ export default function CalendarPage() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header with KPIs */}
+      {/* Header with Tabs */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -422,57 +558,110 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-gray-900">{weekKPIs.events}</div>
-            <div className="text-sm text-gray-600">Events this week</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-gray-900">{weekKPIs.lessons}</div>
-            <div className="text-sm text-gray-600">Surf Lessons this week</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-gray-900">{weekKPIs.meals}</div>
-            <div className="text-sm text-gray-600">Meals this week</div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-2xl font-bold text-gray-900">{weekKPIs.total}</div>
-            <div className="text-sm text-gray-600">Total Activities</div>
-          </div>
+        {/* Tab Navigation */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab('camp')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'camp'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <CalendarIcon className="w-5 h-5 mr-2 inline" />
+              Camp Calendar
+            </button>
+            <button
+              onClick={() => setActiveTab('shifts')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'shifts'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <ClockIcon className="w-5 h-5 mr-2 inline" />
+              Shift Calendar
+            </button>
+          </nav>
         </div>
 
-        {/* Filter Toggle */}
-        <div className="flex items-center space-x-4 mb-4">
-          <span className="text-sm font-medium text-gray-700">Show:</span>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={filters.events}
-              onChange={(e) => setFilters({...filters, events: e.target.checked})}
-              className="mr-2"
-            />
-            <span className="text-sm" style={{color: COLORS.event}}>Events</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={filters.lessons}
-              onChange={(e) => setFilters({...filters, lessons: e.target.checked})}
-              className="mr-2"
-            />
-            <span className="text-sm" style={{color: COLORS.lesson}}>Lessons</span>
-          </label>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              checked={filters.meals}
-              onChange={(e) => setFilters({...filters, meals: e.target.checked})}
-              className="mr-2"
-            />
-            <span className="text-sm" style={{color: COLORS.meal}}>Meals</span>
-          </label>
+        {/* KPI Cards */}
+        <div className="grid grid-cols-4 gap-4 mb-6">
+          {activeTab === 'camp' ? (
+            <>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.events}</div>
+                <div className="text-sm text-gray-600">Events this week</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.lessons}</div>
+                <div className="text-sm text-gray-600">Surf Lessons this week</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.meals}</div>
+                <div className="text-sm text-gray-600">Meals this week</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.total}</div>
+                <div className="text-sm text-gray-600">Total Activities</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.shifts}</div>
+                <div className="text-sm text-gray-600">Shifts this week</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.host}</div>
+                <div className="text-sm text-gray-600">Host shifts</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.instructor}</div>
+                <div className="text-sm text-gray-600">Instructor shifts</div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{weekKPIs.total}</div>
+                <div className="text-sm text-gray-600">Total Shifts</div>
+              </div>
+            </>
+          )}
         </div>
+
+        {/* Filter Toggle - Only for Camp Calendar */}
+        {activeTab === 'camp' && (
+          <div className="flex items-center space-x-4 mb-4">
+            <span className="text-sm font-medium text-gray-700">Show:</span>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={filters.events}
+                onChange={(e) => setFilters({...filters, events: e.target.checked})}
+                className="mr-2"
+              />
+              <span className="text-sm" style={{color: COLORS.event}}>Events</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={filters.lessons}
+                onChange={(e) => setFilters({...filters, lessons: e.target.checked})}
+                className="mr-2"
+              />
+              <span className="text-sm" style={{color: COLORS.lesson}}>Lessons</span>
+            </label>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={filters.meals}
+                onChange={(e) => setFilters({...filters, meals: e.target.checked})}
+                className="mr-2"
+              />
+              <span className="text-sm" style={{color: COLORS.meal}}>Meals</span>
+            </label>
+          </div>
+        )}
       </div>
 
       {/* Calendar Grid */}
@@ -619,6 +808,20 @@ export default function CalendarPage() {
                 <div>
                   <span className="text-sm font-medium text-gray-700">Assigned Staff: </span>
                   <span className="text-sm text-gray-600">{selectedItem.meta.assigned_staff.join(', ')}</span>
+                </div>
+              )}
+
+              {selectedItem.type === 'shift' && selectedItem.meta.notes && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Notes: </span>
+                  <span className="text-sm text-gray-600">{selectedItem.meta.notes}</span>
+                </div>
+              )}
+
+              {selectedItem.type === 'shift' && selectedItem.meta.role && (
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Role: </span>
+                  <span className="text-sm text-gray-600 capitalize">{selectedItem.meta.role}</span>
                 </div>
               )}
             </div>

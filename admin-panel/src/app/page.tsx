@@ -13,6 +13,7 @@ import {
   BellIcon,
   DocumentChartBarIcon
 } from '@heroicons/react/24/outline'
+import { databaseService } from '@/lib/database-service'
 
 interface DashboardStats {
   guests: {
@@ -167,46 +168,20 @@ export default function Dashboard() {
 
   const loadDashboardStats = async () => {
     try {
-      // Mock data for initial deployment
-      const mockStats: DashboardStats = {
-        guests: {
-          total: 24,
-          inHouse: 18,
-          surfPackage: 12,
-          surfPackagePercentage: 67
-        },
-        lessons: {
-          today: 8,
-          beginnerCount: 4,
-          intermediateCount: 3,
-          advancedCount: 1
-        },
-        meals: {
-          ordersToday: 45,
-          meatCount: 20,
-          vegetarianCount: 15,
-          veganCount: 8,
-          otherCount: 2
-        },
-        events: {
-          today: 3,
-          totalAttendance: 18
-        },
-        staff: {
-          active: 6
-        },
-        inventory: {
-          bedsOccupied: 18,
-          bedsTotal: 24,
-          occupancyPercentage: 75,
-          roomsCount: 8
-        },
-        shifts: { today: 4 }
-      }
-
-      setStats(mockStats)
+      const realStats = await databaseService.getDashboardStats()
+      setStats(realStats)
     } catch (error) {
       console.error('Error loading dashboard stats:', error)
+      // Fallback to empty stats if database fails
+      setStats({
+        guests: { total: 0, inHouse: 0, surfPackage: 0, surfPackagePercentage: 0 },
+        lessons: { today: 0, beginnerCount: 0, intermediateCount: 0, advancedCount: 0 },
+        meals: { ordersToday: 0, meatCount: 0, vegetarianCount: 0, veganCount: 0, otherCount: 0 },
+        events: { today: 0, totalAttendance: 0 },
+        staff: { active: 0 },
+        inventory: { bedsOccupied: 0, bedsTotal: 0, occupancyPercentage: 0, roomsCount: 0 },
+        shifts: { today: 0 }
+      })
     } finally {
       setLoading(false)
     }
