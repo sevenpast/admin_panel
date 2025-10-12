@@ -141,6 +141,7 @@ CREATE TABLE rooms (
     room_id VARCHAR(12) UNIQUE NOT NULL,
     camp_id UUID NOT NULL REFERENCES camps(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    base_name VARCHAR(255) NOT NULL, -- For grouping (e.g., "Room 1", "Room 2")
     room_type room_type_enum DEFAULT 'dormitory',
     description TEXT,
     max_capacity INTEGER DEFAULT 0,
@@ -153,6 +154,7 @@ CREATE TABLE rooms (
 CREATE INDEX idx_rooms_camp_id ON rooms(camp_id);
 CREATE INDEX idx_rooms_active ON rooms(camp_id, is_active);
 CREATE INDEX idx_rooms_type ON rooms(camp_id, room_type);
+CREATE INDEX idx_rooms_base_name ON rooms(camp_id, base_name); -- For grouping
 CREATE UNIQUE INDEX idx_rooms_id ON rooms(room_id);
 CREATE TRIGGER update_rooms_updated_at BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -351,6 +353,7 @@ CREATE TABLE equipment (
     equipment_id VARCHAR(12) UNIQUE NOT NULL,
     camp_id UUID NOT NULL REFERENCES camps(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
+    base_name VARCHAR(255) NOT NULL, -- For grouping (e.g., "Beginner Board 8'0")
     category equipment_category_enum NOT NULL,
     type VARCHAR(100),
     brand VARCHAR(100),
@@ -359,9 +362,10 @@ CREATE TABLE equipment (
     condition equipment_condition_enum DEFAULT 'good',
     currently_assigned_to UUID REFERENCES guests(id),
     description TEXT,
-    serial_number VARCHAR(100),
-    purchase_date DATE,
+    quantity INTEGER DEFAULT 1,
     notes TEXT,
+    numbering_type VARCHAR(20) DEFAULT 'numeric',
+    numbering_start INTEGER DEFAULT 1,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
@@ -369,6 +373,7 @@ CREATE TABLE equipment (
 CREATE INDEX idx_equipment_camp_id ON equipment(camp_id);
 CREATE INDEX idx_equipment_status ON equipment(camp_id, status);
 CREATE INDEX idx_equipment_category ON equipment(camp_id, category);
+CREATE INDEX idx_equipment_base_name ON equipment(camp_id, base_name); -- For grouping
 CREATE INDEX idx_equipment_available ON equipment(camp_id, status, is_active) WHERE status = 'available' AND is_active = true;
 CREATE INDEX idx_equipment_assigned_to ON equipment(currently_assigned_to) WHERE currently_assigned_to IS NOT NULL;
 CREATE UNIQUE INDEX idx_equipment_id ON equipment(equipment_id);

@@ -24,10 +24,7 @@ CREATE TABLE IF NOT EXISTS camps (
 
 CREATE TRIGGER IF NOT EXISTS update_camps_updated_at BEFORE UPDATE ON camps FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Insert demo camp if it doesn't exist
-INSERT INTO camps (name, timezone, is_active)
-SELECT 'Demo Camp', 'Europe/Lisbon', true
-WHERE NOT EXISTS (SELECT 1 FROM camps WHERE name = 'Demo Camp');
+-- No demo data - use real camp data
 
 -- Create staff table exactly as in old database
 CREATE TABLE IF NOT EXISTS staff (
@@ -46,18 +43,7 @@ CREATE TABLE IF NOT EXISTS staff (
 
 CREATE TRIGGER IF NOT EXISTS update_staff_updated_at BEFORE UPDATE ON staff FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Insert demo staff if they don't exist
-INSERT INTO staff (staff_id, camp_id, name, mobile_number, is_active)
-SELECT 'STAFF001', (SELECT id FROM camps WHERE name = 'Demo Camp'), 'Max Mustermann', '+49123456789', true
-WHERE NOT EXISTS (SELECT 1 FROM staff WHERE staff_id = 'STAFF001');
-
-INSERT INTO staff (staff_id, camp_id, name, mobile_number, is_active)
-SELECT 'STAFF002', (SELECT id FROM camps WHERE name = 'Demo Camp'), 'Lisa Schmidt', '+49123456790', true
-WHERE NOT EXISTS (SELECT 1 FROM staff WHERE staff_id = 'STAFF002');
-
-INSERT INTO staff (staff_id, camp_id, name, mobile_number, is_active)
-SELECT 'STAFF003', (SELECT id FROM camps WHERE name = 'Demo Camp'), 'Tom Weber', '+49123456791', true
-WHERE NOT EXISTS (SELECT 1 FROM staff WHERE staff_id = 'STAFF003');
+-- No demo staff data - use real staff data
 
 -- Create enum types as in old database
 DO $$ BEGIN
@@ -97,18 +83,7 @@ CREATE TABLE IF NOT EXISTS guests (
 
 CREATE TRIGGER IF NOT EXISTS update_guests_updated_at BEFORE UPDATE ON guests FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Insert demo guests if they don't exist
-INSERT INTO guests (guest_id, camp_id, name, mobile_number, surf_package, is_active, surf_level)
-SELECT 'GUEST001', (SELECT id FROM camps WHERE name = 'Demo Camp'), 'John Doe', '+49123456792', true, true, 'beginner'
-WHERE NOT EXISTS (SELECT 1 FROM guests WHERE guest_id = 'GUEST001');
-
-INSERT INTO guests (guest_id, camp_id, name, mobile_number, surf_package, is_active, surf_level)
-SELECT 'GUEST002', (SELECT id FROM camps WHERE name = 'Demo Camp'), 'Jane Smith', '+49123456793', true, true, 'intermediate'
-WHERE NOT EXISTS (SELECT 1 FROM guests WHERE guest_id = 'GUEST002');
-
-INSERT INTO guests (guest_id, camp_id, name, mobile_number, surf_package, is_active, surf_level)
-SELECT 'GUEST003', (SELECT id FROM camps WHERE name = 'Demo Camp'), 'Mike Johnson', '+49123456794', false, true, 'beginner'
-WHERE NOT EXISTS (SELECT 1 FROM guests WHERE guest_id = 'GUEST003');
+-- No demo guest data - use real guest data
 
 -- Drop existing meals table if wrong structure
 DROP TABLE IF EXISTS meals CASCADE;
@@ -139,28 +114,7 @@ CREATE TABLE meals (
 
 CREATE TRIGGER update_meals_updated_at BEFORE UPDATE ON meals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Insert demo meals based on old structure
-INSERT INTO meals (meal_id, camp_id, name, meal_type, meal_date, description, ingredients, planned_portions, prep_time_minutes, cooking_time_minutes, kitchen_notes, is_active, is_confirmed) VALUES
-('MEAL001',
- (SELECT id FROM camps WHERE name = 'Demo Camp'),
- 'Pancakes with Berries', 'breakfast', CURRENT_DATE,
- 'Fluffy pancakes served with fresh mixed berries and maple syrup',
- ARRAY['flour', 'milk', 'eggs', 'sugar', 'baking powder', 'mixed berries', 'maple syrup'],
- 20, 15, 20, 'Keep batter smooth, don''t overmix', true, false),
-
-('MEAL002',
- (SELECT id FROM camps WHERE name = 'Demo Camp'),
- 'Grilled Chicken Caesar Salad', 'lunch', CURRENT_DATE,
- 'Classic Caesar salad with grilled chicken breast and homemade croutons',
- ARRAY['chicken breast', 'romaine lettuce', 'parmesan', 'caesar dressing', 'croutons', 'lemon'],
- 25, 20, 15, 'Grill chicken to 165°F internal temperature', true, false),
-
-('MEAL003',
- (SELECT id FROM camps WHERE name = 'Demo Camp'),
- 'Pasta Bolognese', 'dinner', CURRENT_DATE,
- 'Traditional Italian Bolognese with ground beef and fresh herbs',
- ARRAY['ground beef', 'pasta', 'tomatoes', 'onion', 'garlic', 'basil', 'oregano', 'parmesan'],
- 30, 30, 45, 'Simmer sauce for minimum 45 minutes', true, false);
+-- No demo meal data - use real meal data
 
 -- Success message
 SELECT 'Real Database Structure Setup Completed!' as status;

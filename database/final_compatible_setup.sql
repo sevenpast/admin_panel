@@ -44,10 +44,7 @@ CREATE TABLE IF NOT EXISTS camps (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- Insert demo camp if it doesn't exist
-INSERT INTO camps (camp_id, name, description, location, timezone, currency)
-SELECT 'C-DEFAULT001', 'Demo Surf Camp', 'Demo surf camp for testing CampFlow', 'Demo Beach, Portugal', 'Europe/Lisbon', 'EUR'
-WHERE NOT EXISTS (SELECT 1 FROM camps WHERE camp_id = 'C-DEFAULT001');
+-- No demo data - use real camp data
 
 -- Create staff table matching current admin panel expectations
 CREATE TABLE IF NOT EXISTS staff (
@@ -72,18 +69,7 @@ CREATE TABLE IF NOT EXISTS staff (
   UNIQUE(camp_id, staff_id)
 );
 
--- Insert demo staff if they don't exist
-INSERT INTO staff (camp_id, staff_id, employee_id, first_name, last_name, email, role, status)
-SELECT 'C-DEFAULT001', 'S-STAFF00001', 'EMP001', 'Max', 'Mustermann', 'max@demo.com', 'admin', 'active'
-WHERE NOT EXISTS (SELECT 1 FROM staff WHERE staff_id = 'S-STAFF00001');
-
-INSERT INTO staff (camp_id, staff_id, employee_id, first_name, last_name, email, role, status)
-SELECT 'C-DEFAULT001', 'S-STAFF00002', 'EMP002', 'Lisa', 'Schmidt', 'lisa@demo.com', 'instructor', 'active'
-WHERE NOT EXISTS (SELECT 1 FROM staff WHERE staff_id = 'S-STAFF00002');
-
-INSERT INTO staff (camp_id, staff_id, employee_id, first_name, last_name, email, role, status)
-SELECT 'C-DEFAULT001', 'S-STAFF00003', 'EMP003', 'Tom', 'Weber', 'tom@demo.com', 'kitchen_staff', 'active'
-WHERE NOT EXISTS (SELECT 1 FROM staff WHERE staff_id = 'S-STAFF00003');
+-- No demo staff data - use real staff data
 
 -- Create guests table matching current admin panel expectations
 CREATE TABLE IF NOT EXISTS guests (
@@ -114,14 +100,7 @@ CREATE TABLE IF NOT EXISTS guests (
   UNIQUE(camp_id, guest_id)
 );
 
--- Insert demo guests if they don't exist
-INSERT INTO guests (camp_id, guest_id, first_name, last_name, email, status)
-SELECT 'C-DEFAULT001', 'G-GUEST00001', 'John', 'Doe', 'john@demo.com', 'checked_in'
-WHERE NOT EXISTS (SELECT 1 FROM guests WHERE guest_id = 'G-GUEST00001');
-
-INSERT INTO guests (camp_id, guest_id, first_name, last_name, email, status)
-SELECT 'C-DEFAULT001', 'G-GUEST00002', 'Jane', 'Smith', 'jane@demo.com', 'checked_in'
-WHERE NOT EXISTS (SELECT 1 FROM guests WHERE guest_id = 'G-GUEST00002');
+-- No demo guest data - use real guest data
 
 -- Drop existing meal tables if wrong structure
 DROP TABLE IF EXISTS meals CASCADE;

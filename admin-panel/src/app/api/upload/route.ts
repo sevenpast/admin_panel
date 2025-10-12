@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { writeFile } from 'fs/promises'
+import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
+import { existsSync } from 'fs'
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,24 +30,22 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop()
     const fileName = `meal_${timestamp}.${fileExtension}`
 
-    // Save to public/uploads directory
-    const uploadsDir = join(process.cwd(), 'public', 'uploads')
+    // Save to persistent storage directory (use /tmp for deployment compatibility)
+    const uploadsDir = process.env.NODE_ENV === 'production' 
+      ? join('/tmp', 'uploads') 
+      : join(process.cwd(), 'public', 'uploads')
     const filePath = join(uploadsDir, fileName)
 
     // Create uploads directory if it doesn't exist
-    try {
-      await writeFile(filePath, buffer)
-    } catch (error) {
-      // Try to create the directory and then write the file
-      const fs = require('fs')
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true })
-      }
-      await writeFile(filePath, buffer)
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true })
     }
+    await writeFile(filePath, buffer)
 
-    // Return the URL path
-    const fileUrl = `/uploads/${fileName}`
+    // Return the URL path (use absolute path for production)
+    const fileUrl = process.env.NODE_ENV === 'production' 
+      ? `/tmp/uploads/${fileName}`
+      : `/uploads/${fileName}`
 
     return NextResponse.json({
       success: true,

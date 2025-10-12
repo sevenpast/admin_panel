@@ -30,20 +30,67 @@ interface Guest {
     id: string
     bed_name: string
   }
+  bed_assignments?: Array<{
+    id: string
+    bed_id: string
+    status: string
+    assigned_at: string
+    beds?: {
+      id: string
+      bed_id: string
+      identifier: string
+      bed_type: string
+      capacity: number
+      current_occupancy: number
+      rooms?: {
+        id: string
+        name: string
+        room_number: string
+      }
+    }
+  }>
+  equipment_assignments?: Array<{
+    id: string
+    equipment_id: string
+    status: string
+    assigned_at: string
+    equipment?: {
+      id: string
+      name: string
+      equipment_id: string
+      category: string
+    }
+  }>
   created_at: string
 }
 
 interface Room {
   id: string
-  room_number: string
-  beds: Bed[]
+  room_id: string
+  name: string
+  room_number?: string
+  room_type: string
+  description?: string
+  beds?: Bed[]
 }
 
 interface Bed {
   id: string
-  bed_name: string
+  bed_id: string
+  identifier: string
+  bed_type: string
   capacity: number
-  occupied_count: number
+  current_occupancy: number
+  bed_assignments?: Array<{
+    id: string
+    status: string
+    guest_id: string
+    guests?: {
+      id: string
+      guest_id: string
+      name: string
+    }
+  }>
 }
 
 const ALLERGY_OPTIONS = [
@@ -62,6 +109,9 @@ export default function GuestsPage() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [selectedGuest, setSelectedGuest] = useState<Guest | null>(null)
+  const [activeTab, setActiveTab] = useState<'information' | 'assessment'>('information')
+  const [assessmentQuestions, setAssessmentQuestions] = useState<any[]>([])
+  const [assessmentAnswers, setAssessmentAnswers] = useState<Record<string, number>>({})
 
   // Create/Edit Form State
   const [formData, setFormData] = useState({
@@ -80,112 +130,40 @@ export default function GuestsPage() {
 
   useEffect(() => {
     loadData()
+    loadAssessmentQuestions()
   }, [])
 
   const loadData = async () => {
     setLoading(true)
     try {
-      // Load mock data since Supabase is not configured
-      const mockGuests: Guest[] = [
-        {
-          id: '1',
-          guest_id: 'G-A1B2C3D4E5',
-          name: 'John Doe',
-          mobile_number: '+49123456789',
-          instagram: 'johndoe_surf',
-          surf_package: true,
-          is_active: true,
-          surf_level: 'intermediate',
-          allergies: { nuts: true, dairy: false },
-          other_allergies: 'Shellfish allergy (severe)',
-          room: { id: '1', room_number: '101' },
-          bed: { id: '1', bed_name: 'A1' },
-          created_at: '2024-01-15T10:00:00Z'
-        },
-        {
-          id: '2',
-          guest_id: 'G-F6G7H8I9J0',
-          name: 'Maria Garcia',
-          mobile_number: '+34666777888',
-          instagram: 'maria_waves',
-          surf_package: true,
-          is_active: true,
-          surf_level: 'beginner',
-          allergies: { gluten: true },
-          room: { id: '1', room_number: '101' },
-          bed: { id: '2', bed_name: 'A2' },
-          created_at: '2024-01-16T14:30:00Z'
-        },
-        {
-          id: '3',
-          guest_id: 'G-K1L2M3N4O5',
-          name: 'Tom Wilson',
-          mobile_number: '+44777888999',
-          surf_package: false,
-          is_active: true,
-          allergies: {},
-          room: { id: '2', room_number: '102' },
-          bed: { id: '3', bed_name: 'B1' },
-          created_at: '2024-01-17T09:15:00Z'
-        },
-        {
-          id: '4',
-          guest_id: 'G-P6Q7R8S9T0',
-          name: 'Sarah Connor',
-          mobile_number: '+1555123456',
-          instagram: 'sarah_surfgirl',
-          surf_package: true,
-          is_active: true,
-          surf_level: 'advanced',
-          allergies: { dairy: true, eggs: true },
-          other_allergies: 'No spicy food',
-          room: { id: '2', room_number: '102' },
-          bed: { id: '4', bed_name: 'B2' },
-          created_at: '2024-01-18T16:45:00Z'
-        },
-        {
-          id: '5',
-          guest_id: 'G-U1V2W3X4Y5',
-          name: 'Alex Johnson',
-          instagram: 'alex_boardrider',
-          surf_package: true,
-          is_active: false,
-          allergies: {},
-          created_at: '2024-01-19T11:20:00Z'
-        }
-      ]
+      // Load guests first
+      const guestsResponse = await fetch('/api/guests')
+      if (guestsResponse.ok) {
+        const guestsData = await guestsResponse.json()
+        setGuests(guestsData.data || [])
+      } else {
+        console.error('Error loading guests:', await guestsResponse.text())
+        setGuests([])
+      }
 
-      const mockRooms: Room[] = [
-        {
-          id: '1',
-          room_number: '101',
-          beds: [
-            { id: '1', bed_name: 'A1', capacity: 1, occupied_count: 1 },
-            { id: '2', bed_name: 'A2', capacity: 1, occupied_count: 1 }
-          ]
-        },
-        {
-          id: '2',
-          room_number: '102',
-          beds: [
-            { id: '3', bed_name: 'B1', capacity: 1, occupied_count: 1 },
-            { id: '4', bed_name: 'B2', capacity: 1, occupied_count: 1 }
-          ]
-        },
-        {
-          id: '3',
-          room_number: '103',
-          beds: [
-            { id: '5', bed_name: 'C1', capacity: 2, occupied_count: 0 },
-            { id: '6', bed_name: 'C2', capacity: 1, occupied_count: 0 }
-          ]
+      // Load rooms with beds and assignments
+      try {
+        const roomsResponse = await fetch('/api/rooms')
+        if (roomsResponse.ok) {
+          const roomsData = await roomsResponse.json()
+          setRooms(roomsData)
+        } else {
+          console.warn('Rooms API not available:', await roomsResponse.text())
+          setRooms([])
         }
-      ]
-
-      setGuests(mockGuests)
-      setRooms(mockRooms)
+      } catch (roomsError) {
+        console.warn('Rooms API not found, continuing without rooms data')
+        setRooms([])
+      }
     } catch (error) {
       console.error('Error loading data:', error)
+      setGuests([])
+      setRooms([])
     } finally {
       setLoading(false)
     }
@@ -193,6 +171,7 @@ export default function GuestsPage() {
 
   // Filter and search logic
   const filteredGuests = useMemo(() => {
+    if (!Array.isArray(guests)) return []
     return guests.filter(guest => {
       // Search filter
       if (searchQuery && !guest.name.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -204,7 +183,11 @@ export default function GuestsPage() {
       if (packageFilter === 'no_surf_package' && guest.surf_package) return false
 
       // Room filter
-      if (roomFilter !== 'all' && guest.room?.id !== roomFilter) return false
+      if (roomFilter !== 'all') {
+        const currentBedAssignment = guest.bed_assignments?.find(assignment => assignment.status === 'active')
+        const currentRoomId = currentBedAssignment?.beds?.rooms?.id
+        if (currentRoomId !== roomFilter) return false
+      }
 
       // Status filter
       if (statusFilter === 'active' && !guest.is_active) return false
@@ -213,6 +196,36 @@ export default function GuestsPage() {
       return true
     })
   }, [guests, searchQuery, packageFilter, roomFilter, statusFilter])
+
+  // Load assessment questions
+  const loadAssessmentQuestions = async () => {
+    try {
+      const response = await fetch('/api/assessment-questions')
+      if (response.ok) {
+        const questions = await response.json()
+        setAssessmentQuestions(questions)
+      }
+    } catch (error) {
+      console.error('Error loading assessment questions:', error)
+    }
+  }
+
+  // Load assessment answers for a guest
+  const loadAssessmentAnswers = async (guestId: string) => {
+    try {
+      const response = await fetch(`/api/guest-assessments?guest_id=${guestId}`)
+      if (response.ok) {
+        const answers = await response.json()
+        const answersMap: Record<string, number> = {}
+        answers.forEach((answer: any) => {
+          answersMap[answer.question_id] = answer.answer_value
+        })
+        setAssessmentAnswers(answersMap)
+      }
+    } catch (error) {
+      console.error('Error loading assessment answers:', error)
+    }
+  }
 
   const handleCreateGuest = () => {
     setFormData({
@@ -226,6 +239,8 @@ export default function GuestsPage() {
       allergies: {},
       other_allergies: ''
     })
+    setAssessmentAnswers({})
+    setActiveTab('information')
     setShowCreateModal(true)
   }
 
@@ -234,62 +249,227 @@ export default function GuestsPage() {
     setShowViewModal(true)
   }
 
-  const handleEditGuest = (guest: Guest) => {
+  const handleEditGuest = async (guest: Guest) => {
     setSelectedGuest(guest)
+    
+    // Get current bed assignment
+    const currentBedAssignment = guest.bed_assignments?.find(assignment => assignment.status === 'active')
+    const currentBed = currentBedAssignment?.beds
+    const currentRoom = currentBed?.rooms
+    
     setFormData({
       name: guest.name,
       mobile_number: guest.mobile_number || '',
       instagram: guest.instagram || '',
-      room_id: guest.room?.id || '',
-      bed_id: guest.bed?.id || '',
+      room_id: currentRoom?.id || '',
+      bed_id: currentBed?.id || '',
       surf_package: guest.surf_package,
       is_active: guest.is_active,
       allergies: guest.allergies || {},
       other_allergies: guest.other_allergies || ''
     })
+    
+    // Load assessment answers for this guest
+    await loadAssessmentAnswers(guest.id)
+    
+    setActiveTab('information')
     setShowEditModal(true)
   }
 
   const handleDeleteGuest = async (guest: Guest) => {
     if (confirm(`Are you sure you want to delete ${guest.name}? This action cannot be undone.`)) {
-      // Mock delete - in real app would call Supabase
-      setGuests(guests.filter(g => g.id !== guest.id))
-      alert('Guest deleted successfully')
+      try {
+        const { error } = await supabase
+          .from('guests')
+          .delete()
+          .eq('id', guest.id)
+
+        if (error) {
+          console.error('Error deleting guest:', error)
+          alert('Error deleting guest')
+          return
+        }
+
+        setGuests(guests.filter(g => g.id !== guest.id))
+        alert('Guest deleted successfully')
+      } catch (error) {
+        console.error('Error deleting guest:', error)
+        alert('Error deleting guest')
+      }
     }
   }
 
+  // BED ASSIGNMENT LOGIC - COMPLETELY INDEPENDENT
+  const handleBedAssignment = async (guestId: string) => {
+    if (!formData.bed_id) return
+
+    try {
+      // If editing, remove existing bed assignment first
+      if (showEditModal && selectedGuest) {
+        const currentBedAssignment = selectedGuest.bed_assignments?.find(assignment => assignment.status === 'active')
+        if (currentBedAssignment && currentBedAssignment.bed_id !== formData.bed_id) {
+          await fetch(`/api/bed-assignments?id=${currentBedAssignment.id}`, {
+            method: 'DELETE'
+          })
+        }
+      }
+
+      // Check bed availability
+      if (formData.room_id && formData.bed_id) {
+        const currentAvailableBeds = await loadAvailableBeds(formData.room_id)
+        const selectedBed = currentAvailableBeds.find(bed => bed.id === formData.bed_id)
+        
+        if (!selectedBed) {
+          alert('Selected bed is no longer available. Please select a different bed.')
+          setFormData({...formData, bed_id: ''})
+          return
+        }
+      }
+
+      // Assign bed
+      const bedResponse = await fetch('/api/bed-assignments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          bed_id: formData.bed_id,
+          guest_id: guestId
+        })
+      })
+
+      if (!bedResponse.ok) {
+        const error = await bedResponse.json()
+        alert(`Bed assignment failed: ${error.error}`)
+        return
+      }
+
+      alert('Bed assignment saved successfully')
+    } catch (error) {
+      console.error('Error assigning bed:', error)
+      alert('Bed assignment failed')
+    }
+  }
+
+  // SURF ASSESSMENT LOGIC - COMPLETELY INDEPENDENT
+  const handleSurfAssessment = async (guestId: string) => {
+    if (Object.keys(assessmentAnswers).length === 0) return
+
+    try {
+      const answers = Object.entries(assessmentAnswers).map(([questionId, value]) => ({
+        question_id: questionId,
+        answer_value: value
+      }))
+
+      const assessmentResponse = await fetch('/api/guest-assessments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          guest_id: guestId,
+          answers: answers
+        })
+      })
+
+      if (!assessmentResponse.ok) {
+        const error = await assessmentResponse.json()
+        alert(`Assessment answers failed: ${error.error}`)
+        return
+      }
+
+      alert('Assessment answers saved successfully')
+    } catch (error) {
+      console.error('Error saving assessment answers:', error)
+      alert('Assessment answers failed')
+    }
+  }
+
+  // MAIN SAVE FUNCTION - ORCHESTRATES INDEPENDENT LOGICS
   const handleSaveGuest = async () => {
     try {
-      // Mock save - in real app would call Supabase
-      const newGuest: Guest = {
-        id: Date.now().toString(),
-        guest_id: `G-${Math.random().toString(36).substr(2, 10).toUpperCase()}`,
+      const guestData = {
         name: formData.name,
-        mobile_number: formData.mobile_number || undefined,
-        instagram: formData.instagram || undefined,
+        mobile_number: formData.mobile_number || null,
+        instagram: formData.instagram || null,
         surf_package: formData.surf_package,
         is_active: formData.is_active,
         allergies: formData.allergies,
-        other_allergies: formData.other_allergies || undefined,
-        room: formData.room_id ? rooms.find(r => r.id === formData.room_id) : undefined,
-        bed: formData.bed_id ? (() => {
-          const bed = rooms.flatMap(r => r.beds).find(b => b.id === formData.bed_id);
-          return bed ? { id: formData.bed_id, bed_name: bed.bed_name } : undefined;
-        })() : undefined,
-        created_at: new Date().toISOString()
+        other_allergies: formData.other_allergies || null
       }
+
+      let guestId: string
 
       if (showEditModal && selectedGuest) {
         // Update existing guest
-        setGuests(guests.map(g => g.id === selectedGuest.id ? { ...g, ...newGuest, id: selectedGuest.id, guest_id: selectedGuest.guest_id, created_at: selectedGuest.created_at } : g))
+        const response = await fetch('/api/guests', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            id: selectedGuest.id,
+            ...guestData
+          })
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          alert(`Error updating guest: ${error.error}`)
+          return
+        }
+
+        const updatedGuest = await response.json()
+        guestId = updatedGuest.id
+        setGuests(guests.map(g => g.id === selectedGuest.id ? updatedGuest : g))
+        alert('Guest updated successfully')
       } else {
-        // Add new guest
+        // Create new guest
+        const response = await fetch('/api/guests', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(guestData)
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          alert(`Error creating guest: ${error.error}`)
+          return
+        }
+
+        const newGuest = await response.json()
+        guestId = newGuest.id
         setGuests([newGuest, ...guests])
+        alert('Guest created successfully')
       }
+
+      // EXECUTE INDEPENDENT LOGICS BASED ON ACTIVE TAB
+      if (activeTab === 'information') {
+        // Only handle bed assignment on information tab
+        await handleBedAssignment(guestId)
+      } else if (activeTab === 'assessment') {
+        // Only handle surf assessment on assessment tab
+        await handleSurfAssessment(guestId)
+      }
+
+      // Refresh data to show updated bed assignments and assessment answers
+      await loadData()
 
       setShowCreateModal(false)
       setShowEditModal(false)
-      alert('Guest saved successfully')
+      setFormData({
+        name: '',
+        mobile_number: '',
+        instagram: '',
+        room_id: '',
+        bed_id: '',
+        surf_package: true,
+        is_active: true,
+        allergies: {},
+        other_allergies: ''
+      })
     } catch (error) {
       console.error('Error saving guest:', error)
       alert('Error saving guest')
@@ -303,9 +483,29 @@ export default function GuestsPage() {
     setStatusFilter('all')
   }
 
+  const [availableBeds, setAvailableBeds] = useState<any[]>([])
+
+  const loadAvailableBeds = async (roomId: string) => {
+    try {
+      const response = await fetch(`/api/available-beds?room_id=${roomId}`)
+      if (response.ok) {
+        const beds = await response.json()
+        setAvailableBeds(beds)
+        return beds // Return the beds directly
+      } else {
+        console.error('Error loading available beds:', response.statusText)
+        setAvailableBeds([])
+        return []
+      }
+    } catch (error) {
+      console.error('Error loading available beds:', error)
+      setAvailableBeds([])
+      return []
+    }
+  }
+
   const getAvailableBeds = (roomId: string) => {
-    const room = rooms.find(r => r.id === roomId)
-    return room?.beds.filter(bed => bed.occupied_count < bed.capacity) || []
+    return availableBeds // API now returns only available beds
   }
 
   if (loading) {
@@ -363,9 +563,15 @@ export default function GuestsPage() {
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="all">All Rooms</option>
-            {rooms.map(room => (
-              <option key={room.id} value={room.id}>Room {room.room_number}</option>
-            ))}
+            {rooms.length > 0 ? (
+              rooms.map(room => (
+                <option key={room.id} value={room.id}>
+                  {room.room_number || room.name || `Room ${room.room_id}`}
+                </option>
+              ))
+            ) : (
+              <option value="no_rooms" disabled>No rooms available</option>
+            )}
           </select>
 
           {/* Status Filter */}
@@ -446,14 +652,40 @@ export default function GuestsPage() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {guest.room ? (
-                    <span className="cursor-pointer text-blue-600 hover:text-blue-800">
-                      {guest.room.room_number}
-                    </span>
-                  ) : '-'}
+                  {(() => {
+                    const currentBedAssignment = guest.bed_assignments?.find(assignment => assignment.status === 'active')
+                    const currentRoom = currentBedAssignment?.beds?.rooms
+                    return currentRoom ? (
+                      <div className="flex flex-col">
+                        <span className="font-medium text-blue-600 hover:text-blue-800 cursor-pointer">
+                          {currentRoom.room_number || currentRoom.name || `Room ${currentRoom.id}`}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Room ID: {currentRoom.id.slice(0, 8)}...
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 italic">No room assigned</span>
+                    )
+                  })()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {guest.bed?.bed_name || '-'}
+                  {(() => {
+                    const currentBedAssignment = guest.bed_assignments?.find(assignment => assignment.status === 'active')
+                    const currentBed = currentBedAssignment?.beds
+                    return currentBed ? (
+                      <div className="flex flex-col">
+                        <span className="font-medium text-gray-900">
+                          {currentBed.identifier || currentBed.bed_id}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {currentBed.bed_type} • {currentBed.current_occupancy}/{currentBed.capacity} occupied
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 italic">No bed assigned</span>
+                    )
+                  })()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <button
@@ -509,9 +741,34 @@ export default function GuestsPage() {
               </button>
             </div>
 
+            {/* Tab Navigation */}
+            <div className="flex border-b border-gray-200 mb-6">
+              <button
+                onClick={() => setActiveTab('information')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  activeTab === 'information'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Personal Information
+              </button>
+              <button
+                onClick={() => setActiveTab('assessment')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${
+                  activeTab === 'assessment'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Surf Assessment
+              </button>
+            </div>
+
             {/* Personal Information Tab */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Personal Information</h3>
+            {activeTab === 'information' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Personal Information</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -551,38 +808,54 @@ export default function GuestsPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Room
-                  </label>
-                  <select
-                    value={formData.room_id}
-                    onChange={(e) => setFormData({...formData, room_id: e.target.value, bed_id: ''})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Room</option>
-                    {rooms.map(room => (
-                      <option key={room.id} value={room.id}>Room {room.room_number}</option>
-                    ))}
-                  </select>
-                </div>
+                {rooms.length > 0 && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Room
+                      </label>
+                      <select
+                        value={formData.room_id}
+                        onChange={(e) => {
+                          const roomId = e.target.value
+                          setFormData({...formData, room_id: roomId, bed_id: ''})
+                          if (roomId) {
+                            loadAvailableBeds(roomId)
+                          } else {
+                            setAvailableBeds([])
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select Room</option>
+                        {rooms.map(room => (
+                          <option key={room.id} value={room.id}>
+                            {room.room_number || room.name || `Room ${room.room_id}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Bed
-                  </label>
-                  <select
-                    value={formData.bed_id}
-                    onChange={(e) => setFormData({...formData, bed_id: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={!formData.room_id}
-                  >
-                    <option value="">Select Bed</option>
-                    {formData.room_id && getAvailableBeds(formData.room_id).map(bed => (
-                      <option key={bed.id} value={bed.id}>{bed.bed_name}</option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Bed
+                      </label>
+                      <select
+                        value={formData.bed_id}
+                        onChange={(e) => setFormData({...formData, bed_id: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        disabled={!formData.room_id}
+                      >
+                        <option value="">Select Bed</option>
+                        {formData.room_id && availableBeds.map(bed => (
+                          <option key={bed.id} value={bed.id}>
+                            {bed.identifier || bed.bed_id} ({bed.bed_type}) - {bed.current_occupancy || 0}/{bed.capacity || 1} occupied
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Checkboxes */}
@@ -646,6 +919,67 @@ export default function GuestsPage() {
                 />
               </div>
             </div>
+            )}
+
+            {/* Surf Assessment Tab */}
+            {activeTab === 'assessment' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Surf Assessment</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Answer the following questions to help determine your surf level. All questions are optional.
+                </p>
+                
+                {assessmentQuestions.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <p>No assessment questions available.</p>
+                    <p className="text-sm">Please create assessment questions in the Lessons module first.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {assessmentQuestions.map((question) => (
+                      <div key={question.id} className="border border-gray-200 rounded-lg p-4">
+                        <div className="mb-3">
+                          <h4 className="font-medium text-gray-900">{question.question_text}</h4>
+                          {question.is_required && (
+                            <span className="text-red-500 text-sm">* Required</span>
+                          )}
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          {[1, 2, 3, 4, 5].map((value) => (
+                            <button
+                              key={value}
+                              onClick={() => setAssessmentAnswers(prev => ({
+                                ...prev,
+                                [question.id]: value
+                              }))}
+                              className={`px-3 py-2 text-sm border rounded-md transition-colors ${
+                                assessmentAnswers[question.id] === value
+                                  ? 'bg-blue-500 text-white border-blue-500'
+                                  : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="text-center">
+                                <div className="font-medium">{value}</div>
+                                <div className="text-xs opacity-75">
+                                  {question.scale_labels?.[value] || `Option ${value}`}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        
+                        {assessmentAnswers[question.id] && (
+                          <div className="mt-2 text-sm text-gray-600">
+                            Selected: {assessmentAnswers[question.id]} - {question.scale_labels?.[assessmentAnswers[question.id]]}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Modal Actions */}
             <div className="flex justify-end space-x-3 mt-6">

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   EyeIcon,
   PencilIcon,
@@ -15,10 +15,9 @@ import {
   MapPinIcon,
   UserIcon,
   ArrowPathIcon,
-  BookmarkIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline'
-import { recurrenceService, EventTemplate, RecurrenceRule } from '@/lib/recurrence-service'
+import { recurrenceService, RecurrenceRule } from '@/lib/recurrence-service'
 
 // Types based on database schema
 interface Staff {
@@ -71,148 +70,22 @@ interface Event {
   equipment_needed?: string[]
   special_requirements?: string
   weather_dependent: boolean
-  is_template: boolean
-  template_name?: string
+  // Cutoff system fields
+  cutoff_time?: string
+  cutoff_enabled?: boolean
+  reset_time?: string
+  reset_enabled?: boolean
+  is_registration_active?: boolean
+  cutoff_status?: 'active' | 'cutoff_reached'
+  can_register?: boolean
+  cutoff_reached?: boolean
   created_by?: string
   created_at: string
   updated_at: string
 }
 
-// Mock data based on database demo data
-const mockStaff: Staff[] = [
-  { id: '1', staff_id: 'S-MAX123MUSTER', name: 'Max Mustermann', labels: ['instructor', 'host'] },
-  { id: '2', staff_id: 'S-ANNA456SCHMIDT', name: 'Anna Schmidt', labels: ['kitchen'] },
-  { id: '3', staff_id: 'S-TOM789WILSON', name: 'Tom Wilson', labels: ['teacher', 'instructor'] }
-]
+// Staff data will be loaded from API
 
-const mockGuests: Guest[] = [
-  { id: '1', guest_id: 'G-JOHN123DOE', name: 'John Doe' },
-  { id: '2', guest_id: 'G-MARIA456GARCIA', name: 'Maria Garcia' },
-  { id: '3', guest_id: 'G-SARAH789CONNOR', name: 'Sarah Connor' }
-]
-
-const mockEvents: Event[] = [
-  {
-    id: '1',
-    title: 'Morning Beach Volleyball',
-    event_type: 'sport_activity',
-    location: 'Beach Court',
-    start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T08:00',
-    end_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T09:30',
-    description: 'Friendly beach volleyball tournament with prizes for winners',
-    status: 'published',
-    min_participants: 4,
-    max_participants: 12,
-    current_participants: 3,
-    price: 0,
-    equipment_needed: ['volleyball', 'net'],
-    special_requirements: 'Bring water bottle and wear sports shoes',
-    weather_dependent: true,
-    is_template: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '2',
-    title: 'Sunrise Yoga Session',
-    event_type: 'day_activity',
-    location: 'Yoga Deck',
-    start_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T06:30',
-    end_time: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T07:30',
-    description: 'Start your day with peaceful yoga overlooking the ocean',
-    status: 'published',
-    min_participants: 5,
-    max_participants: 20,
-    current_participants: 2,
-    price: 0,
-    equipment_needed: ['yoga mats'],
-    special_requirements: 'Bring yoga mat if you have one, wear comfortable clothes',
-    weather_dependent: true,
-    is_template: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '3',
-    title: 'Sunset Photography Workshop',
-    event_type: 'teaching',
-    location: 'Viewpoint Deck',
-    start_time: new Date().toISOString().split('T')[0] + 'T17:30',
-    end_time: new Date().toISOString().split('T')[0] + 'T19:00',
-    description: 'Learn professional photography techniques during golden hour',
-    status: 'draft',
-    min_participants: 3,
-    max_participants: 8,
-    current_participants: 1,
-    price: 25,
-    equipment_needed: ['cameras', 'tripods'],
-    special_requirements: 'Bring camera or smartphone, basic photography knowledge helpful',
-    weather_dependent: true,
-    is_template: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '4',
-    title: 'BBQ Night & Live Music',
-    event_type: 'night_activity',
-    location: 'Main Terrace',
-    start_time: new Date().toISOString().split('T')[0] + 'T19:00',
-    end_time: new Date().toISOString().split('T')[0] + 'T23:00',
-    description: 'Community BBQ with live acoustic music and campfire stories',
-    status: 'published',
-    min_participants: 10,
-    max_participants: 50,
-    current_participants: 8,
-    price: 15,
-    equipment_needed: ['BBQ grills', 'sound system'],
-    special_requirements: 'Vegetarian and vegan options available',
-    weather_dependent: false,
-    is_template: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '5',
-    title: 'Island Boat Tour',
-    event_type: 'day_activity',
-    location: 'Harbor Dock',
-    start_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T09:00',
-    end_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] + 'T16:00',
-    description: 'Full-day boat tour exploring nearby islands with snorkeling stops',
-    status: 'published',
-    min_participants: 6,
-    max_participants: 15,
-    current_participants: 0,
-    price: 45,
-    equipment_needed: ['snorkeling gear', 'life jackets'],
-    special_requirements: 'Bring sunscreen, hat, swimwear, and snorkeling gear if you have it',
-    weather_dependent: true,
-    is_template: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  {
-    id: '6',
-    title: 'Camp Orientation & Safety Briefing',
-    event_type: 'day_activity',
-    location: 'Main Hall',
-    start_time: new Date().toISOString().split('T')[0] + 'T16:00',
-    end_time: new Date().toISOString().split('T')[0] + 'T17:00',
-    description: 'Mandatory orientation for all new arrivals covering camp rules, safety procedures, and activity schedules',
-    status: 'published',
-    min_participants: 1,
-    max_participants: 100,
-    current_participants: 3,
-    price: 0,
-    equipment_needed: [],
-    special_requirements: 'Attendance required for all guests',
-    weather_dependent: false,
-    is_template: false,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  }
-]
 
 // Category mappings
 const categoryLabels = {
@@ -230,7 +103,8 @@ const categoryColors = {
 }
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(mockEvents)
+  const [events, setEvents] = useState<Event[]>([])
+  const [staff, setStaff] = useState<Staff[]>([])
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [isViewModalOpen, setIsViewModalOpen] = useState(false)
@@ -238,13 +112,15 @@ export default function EventsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false)
   const [isRecurrenceModalOpen, setIsRecurrenceModalOpen] = useState(false)
+  // Multi-select state
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([])
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false)
   const [recurrenceSettings, setRecurrenceSettings] = useState<RecurrenceSettings>({
     type: 'none',
     interval: 1,
     daysOfWeek: [],
     maxOccurrences: 10
   })
-  const [templates, setTemplates] = useState<Event[]>([])
   const [filterStatus, setFilterStatus] = useState<'all' | 'draft' | 'published' | 'archived'>('all')
 
   // Enhanced filter state
@@ -279,6 +155,56 @@ export default function EventsPage() {
   const [eventDate, setEventDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
+
+  // Load staff and events data from API
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        // Load staff
+        const staffResponse = await fetch('/api/staff')
+        if (staffResponse.ok) {
+          const staffData = await staffResponse.json()
+          setStaff(staffData)
+        } else {
+          console.error('Error loading staff:', staffResponse.statusText)
+        }
+
+        // Load events
+        const eventsResponse = await fetch('/api/events')
+        if (eventsResponse.ok) {
+          const eventsData = await eventsResponse.json()
+          setEvents(eventsData)
+        } else {
+          console.error('Error loading events:', eventsResponse.statusText)
+        }
+      } catch (error) {
+        console.error('Error loading data:', error)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  // Check cutoff status every minute
+  useEffect(() => {
+    const cutoffCheckInterval = setInterval(async () => {
+      try {
+        const response = await fetch('/api/cutoff-cron')
+        if (response.ok) {
+          // Reload events to get updated cutoff status
+          const eventsResponse = await fetch('/api/events')
+          if (eventsResponse.ok) {
+            const eventsData = await eventsResponse.json()
+            setEvents(eventsData)
+          }
+        }
+      } catch (error) {
+        console.error('Error checking cutoff status:', error)
+      }
+    }, 60000) // Check every minute
+
+    return () => clearInterval(cutoffCheckInterval)
+  }, [])
 
   const formatDateTime = (dateTime: string) => {
     const date = new Date(dateTime)
@@ -341,27 +267,6 @@ export default function EventsPage() {
     setIsRecurrenceModalOpen(true)
   }
 
-  const handleSaveAsTemplate = async (event: Event) => {
-    const templateName = prompt('Template Name:', event.title)
-    if (templateName) {
-      const success = await recurrenceService.saveAsTemplate('events', event.id, templateName)
-      if (success) {
-        alert('Event saved as template!')
-        loadTemplates()
-      } else {
-        alert('Error saving template')
-      }
-    }
-  }
-
-  const loadTemplates = async () => {
-    try {
-      const templateData = await recurrenceService.getTemplates('event')
-      setTemplates(templateData)
-    } catch (error) {
-      console.error('Error loading templates:', error)
-    }
-  }
 
   const handleCreateRecurrence = async () => {
     if (!selectedEvent || recurrenceSettings.type === 'none') return
@@ -415,6 +320,58 @@ export default function EventsPage() {
     setEvents(events.filter(e => e.id !== event.id))
     setIsDeleteModalOpen(false)
     setSelectedEvent(null)
+  }
+
+  // Multi-select functions
+  const handleSelectEvent = (eventId: string) => {
+    setSelectedEventIds(prev => 
+      prev.includes(eventId) 
+        ? prev.filter(id => id !== eventId)
+        : [...prev, eventId]
+    )
+  }
+
+  const handleSelectAllEvents = () => {
+    const filteredEvents = events.filter(event => {
+      if (filterStatus === 'all') return true
+      if (filterStatus === 'draft') return event.status === 'draft'
+      if (filterStatus === 'published') return event.status === 'published'
+      if (filterStatus === 'archived') return event.status === 'archived'
+      return true
+    })
+    
+    if (selectedEventIds.length === filteredEvents.length) {
+      setSelectedEventIds([])
+    } else {
+      setSelectedEventIds(filteredEvents.map(event => event.id))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedEventIds.length === 0) {
+      alert('Please select events to delete')
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/events?bulk_ids=${JSON.stringify(selectedEventIds)}`, {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(`${result.deletedCount} events deleted successfully!`)
+        setSelectedEventIds([])
+        setIsBulkDeleteModalOpen(false)
+        loadData()
+      } else {
+        const error = await response.json()
+        alert(`Error deleting events: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error bulk deleting events:', error)
+      alert('Error deleting events')
+    }
   }
 
   const handleCreate = () => {
@@ -486,7 +443,7 @@ export default function EventsPage() {
       equipment_needed: formData.equipment_needed || [],
       special_requirements: formData.special_requirements || '',
       weather_dependent: formData.weather_dependent || false,
-      is_template: false,
+      assigned_staff: formData.assigned_staff || [],
       created_at: selectedEvent?.created_at || new Date().toISOString(),
       updated_at: new Date().toISOString()
     }
@@ -508,6 +465,7 @@ export default function EventsPage() {
   }
 
   const getFilteredEvents = () => {
+    if (!Array.isArray(events)) return []
     return events.filter(event => {
       // Status filter
       if (filterStatus !== 'all' && event.status !== filterStatus) return false
@@ -561,7 +519,21 @@ export default function EventsPage() {
     const duration = formatDuration(event.start_time, event.end_time)
 
     return (
-      <div className={`bg-white rounded-lg border-2 ${categoryColors[event.event_type || 'day_activity']} p-4 shadow-sm hover:shadow-md transition-shadow`}>
+      <div className={`bg-white rounded-lg border-2 p-4 shadow-sm hover:shadow-md transition-shadow ${
+        selectedEventIds.includes(event.id) 
+          ? 'border-blue-500 bg-blue-50' 
+          : categoryColors[event.event_type || 'day_activity']
+      }`}>
+        {/* Checkbox for multi-select */}
+        <div className="flex items-start justify-between mb-2">
+          <input
+            type="checkbox"
+            checked={selectedEventIds.includes(event.id)}
+            onChange={() => handleSelectEvent(event.id)}
+            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+        </div>
+        
         <div className="flex justify-between items-start mb-3">
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900 mb-1">{event.title}</h3>
@@ -600,15 +572,33 @@ export default function EventsPage() {
           </div>
           {event.price && event.price > 0 && (
             <div className="text-sm font-medium text-gray-900">
-              €{event.price}
+              {event.price}
             </div>
           )}
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-            {categoryLabels[event.event_type || 'day_activity']}
-          </span>
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              {categoryLabels[event.event_type || 'day_activity']}
+            </span>
+            {event.cutoff_enabled && (
+              <div className="flex items-center space-x-1">
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  event.cutoff_reached 
+                    ? 'bg-red-100 text-red-700' 
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {event.cutoff_reached ? 'Cutoff' : 'Active'}
+                </span>
+                {event.cutoff_time && (
+                  <span className="text-xs text-gray-500">
+                    {event.cutoff_time}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
 
           <div className="flex space-x-1">
             <button
@@ -646,13 +636,6 @@ export default function EventsPage() {
               <ArrowPathIcon className="w-4 h-4" />
             </button>
 
-            <button
-              onClick={() => handleSaveAsTemplate(event)}
-              className="p-1.5 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
-              title="Save as Template"
-            >
-              <BookmarkIcon className="w-4 h-4" />
-            </button>
 
             <button
               onClick={() => handlePublishToggle(event)}
@@ -690,6 +673,28 @@ export default function EventsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Event Management</h1>
             <p className="text-gray-600">Manage events with recurrence and copy functionality</p>
           </div>
+          {/* Multi-select controls */}
+          {selectedEventIds.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">
+                {selectedEventIds.length} selected
+              </span>
+              <button
+                onClick={() => setIsBulkDeleteModalOpen(true)}
+                className="bg-red-600 text-white px-3 py-1 rounded text-sm hover:bg-red-700 flex items-center space-x-1"
+              >
+                <TrashIcon className="h-4 w-4" />
+                <span>Delete</span>
+              </button>
+              <button
+                onClick={() => setSelectedEventIds([])}
+                className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+          
           <button
             onClick={handleCreate}
             className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
@@ -701,7 +706,26 @@ export default function EventsPage() {
 
         {/* Enhanced Filter Controls */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Filter Events</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Filter Events</h2>
+            
+            {/* Select All Checkbox */}
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedEventIds.length > 0 && selectedEventIds.length === events.filter(event => {
+                  if (filterStatus === 'all') return true
+                  if (filterStatus === 'draft') return event.status === 'draft'
+                  if (filterStatus === 'published') return event.status === 'published'
+                  if (filterStatus === 'archived') return event.status === 'archived'
+                  return true
+                }).length}
+                onChange={handleSelectAllEvents}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label className="text-sm text-gray-700">Select All</label>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Search Title</label>
@@ -792,14 +816,7 @@ export default function EventsPage() {
           {events.length === 0 && (
             <div className="text-center py-12">
               <h3 className="text-lg font-medium text-gray-900 mb-2">No events found</h3>
-              <p className="text-gray-600 mb-4">Get started by creating your first event.</p>
-              <button
-                onClick={handleCreate}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center"
-              >
-                <PlusIcon className="w-5 h-5 mr-2" />
-                Create Event
-              </button>
+              <p className="text-gray-600">No events have been created yet.</p>
             </div>
           )}
         </div>
@@ -880,7 +897,7 @@ export default function EventsPage() {
                   <p className="text-sm text-gray-600">Cost</p>
                   <p className="font-medium text-gray-900">
                     {selectedEvent.price && selectedEvent.price > 0
-                      ? `€${selectedEvent.price}`
+                      ? `${selectedEvent.price}`
                       : 'Free'
                     }
                   </p>
@@ -890,30 +907,25 @@ export default function EventsPage() {
               <div className="mb-6">
                 <p className="text-sm text-gray-600">Assigned Staff</p>
                 <div className="flex flex-wrap gap-2 mt-1">
-                  {mockStaff.slice(0, 2).map(staff => (
-                    <span key={staff.id} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
-                      {staff.name}
-                    </span>
-                  ))}
+                  {selectedEvent.assigned_staff && selectedEvent.assigned_staff.length > 0 ? (
+                    selectedEvent.assigned_staff.map(staffId => {
+                      const staffMember = staff.find(s => s.id === staffId)
+                      return staffMember ? (
+                        <span key={staffMember.id} className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+                          {staffMember.name}
+                        </span>
+                      ) : null
+                    })
+                  ) : (
+                    <span className="text-gray-500 text-xs">No staff assigned</span>
+                  )}
                 </div>
               </div>
 
               <div>
                 <p className="text-sm text-gray-600 mb-2">Registered Participants ({selectedEvent.current_participants})</p>
                 <div className="space-y-2">
-                  {mockGuests.slice(0, selectedEvent.current_participants).map(guest => (
-                    <div key={guest.id} className="flex items-center justify-between bg-gray-50 p-3 rounded">
-                      <div>
-                        <p className="font-medium text-gray-900">{guest.name}</p>
-                        <p className="text-xs text-gray-600">{guest.guest_id}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                          confirmed
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                  <p className="text-sm text-gray-500 italic">No participants registered yet</p>
                 </div>
               </div>
             </div>
@@ -990,22 +1002,22 @@ export default function EventsPage() {
                     Assigned Staff
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {mockStaff.map(staff => (
-                      <label key={staff.id} className="flex items-center">
+                    {staff.map(staffMember => (
+                      <label key={staffMember.id} className="flex items-center">
                         <input
                           type="checkbox"
-                          checked={formData.assigned_staff?.includes(staff.id) || false}
+                          checked={formData.assigned_staff?.includes(staffMember.id) || false}
                           onChange={(e) => {
                             const currentStaff = formData.assigned_staff || []
                             if (e.target.checked) {
-                              setFormData({ ...formData, assigned_staff: [...currentStaff, staff.id] })
+                              setFormData({ ...formData, assigned_staff: [...currentStaff, staffMember.id] })
                             } else {
-                              setFormData({ ...formData, assigned_staff: currentStaff.filter(id => id !== staff.id) })
+                              setFormData({ ...formData, assigned_staff: currentStaff.filter(id => id !== staffMember.id) })
                             }
                           }}
                           className="mr-2"
                         />
-                        <span className="text-sm">{staff.name}</span>
+                        <span className="text-sm">{staffMember.name}</span>
                       </label>
                     ))}
                   </div>
@@ -1082,7 +1094,7 @@ export default function EventsPage() {
                 {/* Cost */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cost per Person (€)
+                    Cost per Person
                   </label>
                   <input
                     type="number"
@@ -1426,6 +1438,48 @@ export default function EventsPage() {
                   Create Recurrence
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      {isBulkDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Delete Events</h3>
+              <button
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <span className="sr-only">Close</span>
+                ✕
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-600">
+                Are you sure you want to delete <strong>{selectedEventIds.length}</strong> selected events?
+              </p>
+              <p className="text-sm text-red-600 mt-2">
+                This action cannot be undone.
+              </p>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsBulkDeleteModalOpen(false)}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+              >
+                Delete {selectedEventIds.length} Events
+              </button>
             </div>
           </div>
         </div>

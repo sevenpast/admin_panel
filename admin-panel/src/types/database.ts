@@ -139,6 +139,7 @@ export interface Database {
           room_id: string
           camp_id: string
           name: string
+          base_name: string
           room_type: 'dormitory' | 'private' | 'suite'
           description: string | null
           max_capacity: number
@@ -147,6 +148,36 @@ export interface Database {
           is_active: boolean
           created_at: string
           updated_at: string
+        }
+        Insert: {
+          id?: string
+          room_id?: string
+          camp_id: string
+          name: string
+          base_name: string
+          room_type?: 'dormitory' | 'private' | 'suite'
+          description?: string | null
+          max_capacity?: number
+          floor_number?: number
+          room_number?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          room_id?: string
+          camp_id?: string
+          name?: string
+          base_name?: string
+          room_type?: 'dormitory' | 'private' | 'suite'
+          description?: string | null
+          max_capacity?: number
+          floor_number?: number
+          room_number?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
         }
       }
       beds: {
@@ -165,6 +196,82 @@ export interface Database {
           notes: string | null
           created_at: string
           updated_at: string
+        }
+        Insert: {
+          id?: string
+          bed_id?: string
+          camp_id: string
+          room_id: string
+          identifier: string
+          bed_type?: 'single' | 'double' | 'bunk_upper' | 'bunk_lower' | 'queen' | 'king' | 'sofa' | 'extra' | 'crib'
+          capacity?: number
+          current_occupancy?: number
+          group_id?: string | null
+          slot?: 'single' | 'upper' | 'lower'
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          bed_id?: string
+          camp_id?: string
+          room_id?: string
+          identifier?: string
+          bed_type?: 'single' | 'double' | 'bunk_upper' | 'bunk_lower' | 'queen' | 'king' | 'sofa' | 'extra' | 'crib'
+          capacity?: number
+          current_occupancy?: number
+          group_id?: string | null
+          slot?: 'single' | 'upper' | 'lower'
+          is_active?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      bed_assignments: {
+        Row: {
+          id: string
+          camp_id: string
+          guest_id: string
+          bed_id: string
+          status: 'active' | 'checked_out' | 'completed'
+          assigned_at: string
+          assigned_by: string | null
+          checked_out_at: string | null
+          completed_at: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          camp_id: string
+          guest_id: string
+          bed_id: string
+          status?: 'active' | 'checked_out' | 'completed'
+          assigned_at?: string
+          assigned_by?: string | null
+          checked_out_at?: string | null
+          completed_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          camp_id?: string
+          guest_id?: string
+          bed_id?: string
+          status?: 'active' | 'checked_out' | 'completed'
+          assigned_at?: string
+          assigned_by?: string | null
+          checked_out_at?: string | null
+          completed_at?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
         }
       }
       lessons: {
@@ -296,6 +403,7 @@ export interface Database {
           equipment_id: string
           camp_id: string
           name: string
+          base_name: string
           category: 'surfboard' | 'wetsuit' | 'safety' | 'cleaning' | 'other'
           type: string | null
           brand: string | null
@@ -304,9 +412,10 @@ export interface Database {
           condition: 'excellent' | 'good' | 'fair' | 'poor'
           currently_assigned_to: string | null
           description: string | null
-          serial_number: string | null
-          purchase_date: string | null
+          quantity: number | null
           notes: string | null
+          numbering_type: string | null
+          numbering_start: number | null
           is_active: boolean
           created_at: string
           updated_at: string
