@@ -1,6 +1,8 @@
 import { StatusBar } from 'expo-status-bar';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -12,6 +14,7 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { FooterNav } from '../../components/FooterNav';
+import { responsive, getActionButtonSize, getCardPadding } from '@/lib/responsive';
 
 type CampEvent = {
   id: string;
@@ -50,6 +53,7 @@ const EVENT_SEED: CampEvent[] = [
 ];
 
 export default function EventsScreen() {
+  const router = useRouter();
   const [events, setEvents] = useState<CampEvent[]>(EVENT_SEED);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newEvent, setNewEvent] = useState({
@@ -83,6 +87,53 @@ export default function EventsScreen() {
     setShowCreateForm(false);
   };
 
+  const handleCardClick = (event: CampEvent) => {
+    // Navigate to event detail page with event data
+    router.push({
+      pathname: '/events/[id]',
+      params: { 
+        id: event.id,
+        title: event.title,
+        time: event.time,
+        location: event.location,
+        facilitator: event.facilitator,
+        notes: event.notes
+      }
+    });
+  };
+
+  const handleEditEvent = (event: CampEvent) => {
+    Alert.alert('Bearbeiten', `Event "${event.title}" bearbeiten (Demo)`);
+  };
+
+  const handleCopyEvent = (event: CampEvent) => {
+    const copiedEvent: CampEvent = {
+      ...event,
+      id: `event-${Date.now()}`,
+      title: `${event.title} (Kopie)`,
+    };
+    setEvents((prev) => [...prev, copiedEvent]);
+    Alert.alert('Erfolg', `Event "${event.title}" wurde kopiert.`);
+  };
+
+  const handleDeleteEvent = (event: CampEvent) => {
+    Alert.alert(
+      'Event löschen',
+      `Möchtest du das Event "${event.title}" wirklich löschen?`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: () => {
+            setEvents((prev) => prev.filter((e) => e.id !== event.id));
+            Alert.alert('Erfolg', 'Event wurde gelöscht.');
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="light" />
@@ -92,17 +143,6 @@ export default function EventsScreen() {
             <Text style={styles.title}>Events</Text>
             <Text style={styles.subtitle}>Heutige Aktivitäten und Begegnungen</Text>
           </View>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowCreateForm((prev) => !prev)}
-            activeOpacity={0.85}
-          >
-            <MaterialCommunityIcons
-              name={showCreateForm ? 'close' : 'plus'}
-              size={22}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
         </View>
         {showCreateForm && (
           <View style={styles.formCard}>
@@ -166,7 +206,14 @@ export default function EventsScreen() {
         )}
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           {events.map((event) => (
-            <View key={event.id} style={styles.card}>
+            <TouchableOpacity
+              key={event.id}
+              style={styles.card}
+              onPress={() => handleCardClick(event)}
+              activeOpacity={0.95}
+              accessibilityRole="button"
+              accessibilityLabel={`Event ${event.title} öffnen`}
+            >
               <Text style={styles.cardTitle}>{event.title}</Text>
               <View style={styles.metaRow}>
                 <Text style={styles.metaLabel}>Zeit</Text>
@@ -181,9 +228,60 @@ export default function EventsScreen() {
                 <Text style={styles.metaValue}>{event.facilitator}</Text>
               </View>
               <Text style={styles.notes}>{event.notes}</Text>
-            </View>
+              
+              <View style={styles.eventActions}>
+                <TouchableOpacity
+                  style={styles.eventActionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleEditEvent(event);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Event bearbeiten"
+                >
+                  <MaterialCommunityIcons name="pencil-outline" size={18} color="#F59E0B" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.eventActionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleCopyEvent(event);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Event kopieren"
+                >
+                  <MaterialCommunityIcons name="content-copy" size={18} color="#8B5CF6" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.eventActionButton}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    handleDeleteEvent(event);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Event löschen"
+                >
+                  <MaterialCommunityIcons name="delete-outline" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
+        
+        <TouchableOpacity
+          style={styles.floatingAddButton}
+          onPress={() => setShowCreateForm((prev) => !prev)}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Neues Event erstellen"
+        >
+          <MaterialCommunityIcons
+            name={showCreateForm ? 'close' : 'plus'}
+            size={24}
+            color="#FFFFFF"
+          />
+        </TouchableOpacity>
+        
         <FooterNav />
       </View>
     </SafeAreaView>
@@ -203,10 +301,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 32,
     paddingBottom: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 18,
   },
   title: {
     fontSize: 28,
@@ -218,18 +312,22 @@ const styles = StyleSheet.create({
     color: '#CBD5F5',
     marginTop: 4,
   },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 100, // Über dem FooterNav
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#1D4ED8',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#1D4ED8',
     shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+    zIndex: 100,
   },
   formCard: {
     marginHorizontal: 24,
@@ -296,39 +394,59 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: responsive.borderRadius.xlarge,
+    padding: getCardPadding(),
     shadowColor: '#000000',
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
+    position: 'relative',
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: responsive.fontSize.xlarge,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 12,
+    marginBottom: responsive.spacing.md,
+  },
+  eventActions: {
+    position: 'absolute',
+    bottom: responsive.spacing.md,
+    right: responsive.spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsive.spacing.xs,
+  },
+  eventActionButton: {
+    width: getActionButtonSize(),
+    height: getActionButtonSize(),
+    borderRadius: getActionButtonSize() / 2,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: responsive.spacing.xs,
   },
   metaLabel: {
-    fontSize: 14,
+    fontSize: responsive.fontSize.small,
     fontWeight: '600',
     color: '#64748B',
   },
   metaValue: {
-    fontSize: 15,
+    fontSize: responsive.fontSize.medium,
     fontWeight: '600',
     color: '#2563EB',
   },
   notes: {
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: responsive.spacing.md,
+    fontSize: responsive.fontSize.small,
     color: '#475569',
     lineHeight: 20,
+    marginBottom: 40, // Platz für die Action-Icons
   },
 });

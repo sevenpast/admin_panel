@@ -247,4 +247,10 @@ Bereich	Stories	Status
 Meal Management	1–6	✅ Kernfunktionen fertig
 Staff Overview	7	🚧 In Arbeit
 Kitchen Overview	8	🚧 In Arbeit
-Synchronisierung & Status	9–10	📋 Geplant / ✅ Teilweise fertig2
+Synchronisierung & Status	9–10	📋 Geplant / ✅ Teilweise fertig2/* Login (Frame 2) */
+
+position: relative;
+width: 1289px;
+height: 832px;
+
+background: #FEFAF6;

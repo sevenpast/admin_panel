@@ -4,6 +4,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FooterNav } from '../../components/FooterNav';
 import { SectionTabs } from '../../components/SectionTabs';
+import { responsive } from '@/lib/responsive';
 
 type InventorySectionKey = 'surf' | 'bed' | 'material' | 'safety' | 'hospitality';
 
@@ -156,29 +157,29 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: responsive.borderRadius.xlarge,
+    padding: responsive.padding.large,
     shadowColor: '#000000',
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: responsive.fontSize.xlarge,
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 4,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: responsive.fontSize.small,
     color: '#64748B',
-    marginBottom: 18,
+    marginBottom: responsive.spacing.lg,
   },
   sectionContent: {
-    gap: 16,
+    gap: responsive.spacing.md,
   },
   itemRow: {
-    paddingBottom: 16,
+    paddingBottom: responsive.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
@@ -188,16 +189,16 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   itemName: {
-    fontSize: 15,
+    fontSize: responsive.fontSize.medium,
     fontWeight: '600',
     color: '#1F2937',
   },
   itemStatus: {
-    fontSize: 14,
+    fontSize: responsive.fontSize.small,
     fontWeight: '700',
   },
   itemDetail: {
-    fontSize: 14,
+    fontSize: responsive.fontSize.small,
     color: '#475569',
     lineHeight: 20,
   },

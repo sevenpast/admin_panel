@@ -7,31 +7,38 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FooterNav } from '../../components/FooterNav';
 import { responsive } from '@/lib/responsive';
 
-const MEAL_DATA = [
+const STAFF_DATA = [
   {
     id: '1',
-    name: 'Frühstück',
-    time: '08:00',
-    participants: 24,
-    status: 'geplant',
+    name: 'Jonas Hartmann',
+    role: 'Surf Instructor',
+    status: 'aktiv',
+    shift: '08:00 - 16:00',
   },
   {
     id: '2',
-    name: 'Mittagessen',
-    time: '12:30',
-    participants: 28,
-    status: 'bereit',
+    name: 'Luisa Mendes',
+    role: 'Kitchen Manager',
+    status: 'aktiv',
+    shift: '06:00 - 14:00',
   },
   {
     id: '3',
-    name: 'Abendessen',
-    time: '18:00',
-    participants: 22,
-    status: 'geplant',
+    name: 'Sven Keller',
+    role: 'Equipment Manager',
+    status: 'pause',
+    shift: '10:00 - 18:00',
+  },
+  {
+    id: '4',
+    name: 'Marek Bianchi',
+    role: 'Guest Relations',
+    status: 'aktiv',
+    shift: '09:00 - 17:00',
   },
 ];
 
-export default function MealsScreen() {
+export default function StaffScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const headerTint = Colors[colorScheme].tint;
 
@@ -40,24 +47,24 @@ export default function MealsScreen() {
       <StatusBar style="light" />
       <View style={styles.page}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Meals</Text>
+          <Text style={styles.headerTitle}>Staff</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={styles.mealCard}>
-            <Text style={styles.mealTitle}>Heutige Mahlzeiten</Text>
-            <Text style={styles.mealSubtitle}>Übersicht der geplanten Mahlzeiten</Text>
+          <View style={styles.staffCard}>
+            <Text style={styles.staffTitle}>Team Übersicht</Text>
+            <Text style={styles.staffSubtitle}>Aktuelle Schichtplanung</Text>
             
-            {MEAL_DATA.map((meal) => (
-              <View key={meal.id} style={styles.mealItem}>
-                <View style={styles.mealInfo}>
-                  <Text style={styles.mealName}>{meal.name}</Text>
-                  <Text style={styles.mealTime}>{meal.time}</Text>
+            {STAFF_DATA.map((member) => (
+              <View key={member.id} style={styles.staffItem}>
+                <View style={styles.staffInfo}>
+                  <Text style={styles.staffName}>{member.name}</Text>
+                  <Text style={styles.staffRole}>{member.role}</Text>
                 </View>
-                <View style={styles.mealDetails}>
-                  <Text style={styles.mealParticipants}>{meal.participants} Teilnehmer</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: meal.status === 'bereit' ? '#10B981' : '#F59E0B' }]}>
-                    <Text style={styles.statusText}>{meal.status}</Text>
+                <View style={styles.staffDetails}>
+                  <Text style={styles.staffShift}>{member.shift}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: member.status === 'aktiv' ? '#10B981' : '#F59E0B' }]}>
+                    <Text style={styles.statusText}>{member.status}</Text>
                   </View>
                 </View>
               </View>
@@ -65,22 +72,22 @@ export default function MealsScreen() {
           </View>
 
           <View style={styles.statsCard}>
-            <Text style={styles.statsTitle}>Statistiken</Text>
+            <Text style={styles.statsTitle}>Team Statistiken</Text>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <MaterialCommunityIcons name="silverware-fork-knife" size={24} color="#DC2626" />
-                <Text style={styles.statValue}>3</Text>
-                <Text style={styles.statLabel}>Mahlzeiten</Text>
-              </View>
-              <View style={styles.statItem}>
                 <MaterialCommunityIcons name="account-group" size={24} color="#1D4ED8" />
-                <Text style={styles.statValue}>74</Text>
-                <Text style={styles.statLabel}>Teilnehmer</Text>
+                <Text style={styles.statValue}>4</Text>
+                <Text style={styles.statLabel}>Team Mitglieder</Text>
               </View>
               <View style={styles.statItem}>
                 <MaterialCommunityIcons name="clock-outline" size={24} color="#059669" />
-                <Text style={styles.statValue}>2.5h</Text>
-                <Text style={styles.statLabel}>Vorbereitung</Text>
+                <Text style={styles.statValue}>3</Text>
+                <Text style={styles.statLabel}>Aktiv</Text>
+              </View>
+              <View style={styles.statItem}>
+                <MaterialCommunityIcons name="calendar-clock" size={24} color="#F59E0B" />
+                <Text style={styles.statValue}>8h</Text>
+                <Text style={styles.statLabel}>Durchschnitt</Text>
               </View>
             </View>
           </View>
@@ -117,7 +124,7 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 120,
   },
-  mealCard: {
+  staffCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: responsive.borderRadius.xlarge,
     padding: responsive.padding.medium,
@@ -128,18 +135,18 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
-  mealTitle: {
+  staffTitle: {
     fontSize: responsive.fontSize.xlarge,
     fontWeight: '700',
     color: '#111827',
     marginBottom: 4,
   },
-  mealSubtitle: {
+  staffSubtitle: {
     fontSize: responsive.fontSize.small,
     color: '#6B7280',
     marginBottom: responsive.spacing.md,
   },
-  mealItem: {
+  staffItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -147,23 +154,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
-  mealInfo: {
+  staffInfo: {
     flex: 1,
   },
-  mealName: {
+  staffName: {
     fontSize: responsive.fontSize.medium,
     fontWeight: '600',
     color: '#111827',
   },
-  mealTime: {
+  staffRole: {
     fontSize: responsive.fontSize.small,
     color: '#6B7280',
     marginTop: 2,
   },
-  mealDetails: {
+  staffDetails: {
     alignItems: 'flex-end',
   },
-  mealParticipants: {
+  staffShift: {
     fontSize: responsive.fontSize.small,
     color: '#6B7280',
     marginBottom: 4,

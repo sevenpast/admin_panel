@@ -1,6 +1,7 @@
 import { SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { FooterNav } from '../../components/FooterNav';
+import { responsive } from '@/lib/responsive';
 
 const ALERTS = [
   { id: 'a1', title: 'Zimmer 12 - Wartung erforderlich', detail: 'Technikteam informiert, Abschluss bis 18:00.' },
@@ -63,8 +64,8 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: responsive.borderRadius.xlarge,
+    padding: responsive.padding.medium,
     shadowColor: '#000000',
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -72,13 +73,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: responsive.fontSize.xlarge,
     fontWeight: '700',
     color: '#111827',
-    marginBottom: 8,
+    marginBottom: responsive.spacing.xs,
   },
   cardBody: {
-    fontSize: 15,
+    fontSize: responsive.fontSize.medium,
     color: '#4B5563',
     lineHeight: 20,
   },

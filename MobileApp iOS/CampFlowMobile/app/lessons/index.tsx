@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FooterNav } from '../../components/FooterNav';
+import { responsive, getActionButtonSize } from '@/lib/responsive';
 
 const SURF_LEVELS = ['Nicht zugewiesen', 'Anfänger', 'Fortgeschritten', 'Profi'];
 
@@ -228,7 +229,7 @@ const INITIAL_LESSON_DRAFT: LessonDraft = {
   maxParticipants: '',
   skillLevel: 'beginner',
   location: '',
-  price: '',
+  price: '0', // Preis wird nicht mehr eingegeben, aber für Kompatibilität beibehalten
   status: 'scheduled',
   description: '',
 };
@@ -248,6 +249,10 @@ export default function LessonsScreen() {
   const [selectedLesson, setSelectedLesson] = useState<SurfLesson | null>(null);
   const [editableLesson, setEditableLesson] = useState<SurfLesson | null>(null);
   const [isLessonEditing, setIsLessonEditing] = useState(false);
+  const [assessmentQuestions, setAssessmentQuestions] = useState(ASSESSMENT_BLUEPRINT);
+  const [selectedQuestion, setSelectedQuestion] = useState<typeof ASSESSMENT_BLUEPRINT[0] | null>(null);
+  const [isEditingQuestion, setIsEditingQuestion] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<{ category: string; question: string }>({ category: '', question: '' });
 
   useEffect(() => {
     if (mode === 'guestDetail' && selectedGuest) {
@@ -343,7 +348,7 @@ export default function LessonsScreen() {
       maxParticipants: Number.parseInt(newLesson.maxParticipants, 10) || 0,
       skillLevel: newLesson.skillLevel,
       location: location || 'tbd',
-      price: Number.parseFloat(newLesson.price) || 0,
+      price: 0, // Preis wird nicht mehr eingegeben
       status: newLesson.status,
       description: description || 'Noch keine Beschreibung hinterlegt.',
       createdAt: new Date().toISOString(),
@@ -411,6 +416,104 @@ export default function LessonsScreen() {
         },
       },
     ]);
+  };
+
+  const handleViewQuestion = (question: typeof ASSESSMENT_BLUEPRINT[0]) => {
+    setSelectedQuestion(question);
+    setMode('overview'); // Bleibt in der Assessment-Sektion
+    Alert.alert(
+      'Assessment-Frage anzeigen',
+      `Kategorie: ${question.category}\n\nFrage: ${question.question}`,
+      [{ text: 'OK' }]
+    );
+  };
+
+  const handleEditQuestion = (question: typeof ASSESSMENT_BLUEPRINT[0]) => {
+    setSelectedQuestion(question);
+    setIsEditingQuestion(true);
+    setEditingQuestion({ category: question.category, question: question.question });
+  };
+
+  const handleSaveQuestion = () => {
+    if (!selectedQuestion || !editingQuestion.category.trim() || !editingQuestion.question.trim()) {
+      Alert.alert('Fehler', 'Kategorie und Frage dürfen nicht leer sein.');
+      return;
+    }
+
+    setAssessmentQuestions((prev) =>
+      prev.map((q) =>
+        q.id === selectedQuestion.id
+          ? { ...q, category: editingQuestion.category, question: editingQuestion.question }
+          : q
+      )
+    );
+    setIsEditingQuestion(false);
+    setSelectedQuestion(null);
+    setEditingQuestion({ category: '', question: '' });
+    Alert.alert('Erfolg', 'Assessment-Frage wurde aktualisiert.');
+  };
+
+  const handleDeleteQuestion = (question: typeof ASSESSMENT_BLUEPRINT[0]) => {
+    Alert.alert(
+      'Assessment-Frage löschen',
+      `Möchtest du diese Frage wirklich löschen?\n\n"${question.question}"`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        {
+          text: 'Löschen',
+          style: 'destructive',
+          onPress: () => {
+            setAssessmentQuestions((prev) => prev.filter((q) => q.id !== question.id));
+            Alert.alert('Erfolg', 'Assessment-Frage wurde gelöscht.');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleCopyLesson = (lesson: SurfLesson) => {
+    const copiedLesson: SurfLesson = {
+      ...lesson,
+      id: `lesson-${Date.now()}`,
+      title: `${lesson.title} (Kopie)`,
+      lessonCode: `${lesson.lessonCode}-COPY`,
+      status: 'scheduled',
+      createdAt: new Date().toISOString(),
+    };
+    
+    setLessons((prev) => [...prev, copiedLesson]);
+    Alert.alert('Erfolg', `Lesson "${lesson.title}" wurde kopiert.`);
+  };
+
+  const handleCreateTemplate = (lesson: SurfLesson) => {
+    const templateLesson: SurfLesson = {
+      ...lesson,
+      id: `template-${Date.now()}`,
+      title: `${lesson.title} (Template)`,
+      lessonCode: `TEMPLATE-${lesson.lessonCode}`,
+      status: 'scheduled',
+      createdAt: new Date().toISOString(),
+    };
+    
+    setLessons((prev) => [...prev, templateLesson]);
+    Alert.alert('Erfolg', `Template "${lesson.title}" wurde erstellt.`);
+  };
+
+  const handleAssignGuests = (lesson: SurfLesson) => {
+    Alert.alert(
+      'Gäste zuweisen',
+      `Gäste für "${lesson.title}" zuweisen\n\nVerfügbare Gäste:\n${SURF_GUESTS.map(guest => `• ${guest.name} (${guest.level})`).join('\n')}`,
+      [
+        { text: 'Abbrechen', style: 'cancel' },
+        { 
+          text: 'Zuweisen', 
+          onPress: () => {
+            // Hier würde normalerweise eine Gäste-Auswahl-UI geöffnet werden
+            Alert.alert('Zuweisung', 'Gäste-Zuweisung wurde gestartet (Demo).');
+          }
+        }
+      ]
+    );
   };
 
   const GuestDetail = () => (
@@ -487,6 +590,36 @@ export default function LessonsScreen() {
             setEditableLesson(selectedLesson);
           } else {
             setIsLessonEditing(true);
+          }
+        },
+      },
+      {
+        key: 'copy',
+        icon: 'content-copy',
+        color: '#8B5CF6',
+        onPress: () => {
+          if (selectedLesson) {
+            handleCopyLesson(selectedLesson);
+          }
+        },
+      },
+      {
+        key: 'template',
+        icon: 'file-document-outline',
+        color: '#10B981',
+        onPress: () => {
+          if (selectedLesson) {
+            handleCreateTemplate(selectedLesson);
+          }
+        },
+      },
+      {
+        key: 'assign',
+        icon: 'account-plus-outline',
+        color: '#F97316',
+        onPress: () => {
+          if (selectedLesson) {
+            handleAssignGuests(selectedLesson);
           }
         },
       },
@@ -682,24 +815,6 @@ export default function LessonsScreen() {
             )}
           </LessonFormField>
 
-          <LessonFormField label="Preis (CHF)">
-            {isLessonEditing ? (
-              <TextInput
-                value={String(editableLesson.price)}
-                onChangeText={(value) =>
-                  setEditableLesson((prev) =>
-                    prev ? { ...prev, price: Number.parseFloat(value) || 0 } : prev,
-                  )
-                }
-                style={styles.formInput}
-                placeholder="79"
-                placeholderTextColor="#94A3B8"
-                keyboardType="numeric"
-              />
-            ) : (
-              <Text style={styles.detailValue}>CHF {editableLesson.price.toFixed(2)}</Text>
-            )}
-          </LessonFormField>
 
           <LessonFormField label="Beschreibung">
             {isLessonEditing ? (
@@ -853,28 +968,16 @@ export default function LessonsScreen() {
           />
         </LessonFormField>
 
-        <View style={styles.formRow}>
-          <LessonFormField label="Max. Teilnehmer" style={styles.formRowItem}>
-            <TextInput
-              value={newLesson.maxParticipants}
-              onChangeText={(value) => setNewLesson((prev) => ({ ...prev, maxParticipants: value }))}
-              style={styles.formInput}
-              placeholder="8"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-            />
-          </LessonFormField>
-          <LessonFormField label="Preis (CHF)" style={styles.formRowItem}>
-            <TextInput
-              value={newLesson.price}
-              onChangeText={(value) => setNewLesson((prev) => ({ ...prev, price: value }))}
-              style={styles.formInput}
-              placeholder="79"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-            />
-          </LessonFormField>
-        </View>
+        <LessonFormField label="Max. Teilnehmer">
+          <TextInput
+            value={newLesson.maxParticipants}
+            onChangeText={(value) => setNewLesson((prev) => ({ ...prev, maxParticipants: value }))}
+            style={styles.formInput}
+            placeholder="8"
+            placeholderTextColor="#94A3B8"
+            keyboardType="numeric"
+          />
+        </LessonFormField>
 
         <LessonFormField label="Beschreibung">
           <TextInput
@@ -1057,7 +1160,7 @@ export default function LessonsScreen() {
                       <Text style={styles.lessonDescription}>{lesson.description}</Text>
                       <View style={styles.lessonCardFooter}>
                         <Text style={styles.lessonInfoLine}>
-                          CHF {lesson.price.toFixed(2)} · {lesson.maxParticipants} Plätze
+                          {lesson.maxParticipants} Plätze
                         </Text>
                         <View
                           style={[styles.lessonStatusBadge, { borderColor: statusMeta.color, backgroundColor: `${statusMeta.color}15` }]}
@@ -1074,10 +1177,89 @@ export default function LessonsScreen() {
 
             {overviewSection === 'assessment' && (
               <ScrollView contentContainerStyle={styles.assessmentContent} showsVerticalScrollIndicator={false}>
-                {ASSESSMENT_BLUEPRINT.map((entry) => (
+                {assessmentQuestions.map((entry) => (
                   <View key={entry.id} style={styles.assessmentCard}>
-                    <Text style={styles.assessmentCategory}>{entry.category}</Text>
-                    <Text style={styles.assessmentQuestion}>{entry.question}</Text>
+                    <View style={styles.assessmentCardHeader}>
+                      <View style={styles.assessmentCardContent}>
+                        {isEditingQuestion && selectedQuestion?.id === entry.id ? (
+                          <>
+                            <TextInput
+                              value={editingQuestion.category}
+                              onChangeText={(value) => setEditingQuestion(prev => ({ ...prev, category: value }))}
+                              style={[styles.formInput, styles.assessmentEditInput]}
+                              placeholder="Kategorie"
+                              placeholderTextColor="#94A3B8"
+                            />
+                            <TextInput
+                              value={editingQuestion.question}
+                              onChangeText={(value) => setEditingQuestion(prev => ({ ...prev, question: value }))}
+                              style={[styles.formInput, styles.assessmentEditInput, styles.assessmentEditTextArea]}
+                              placeholder="Frage"
+                              placeholderTextColor="#94A3B8"
+                              multiline
+                            />
+                          </>
+                        ) : (
+                          <>
+                            <Text style={styles.assessmentCategory}>{entry.category}</Text>
+                            <Text style={styles.assessmentQuestion}>{entry.question}</Text>
+                          </>
+                        )}
+                      </View>
+                      <View style={styles.assessmentActions}>
+                        {isEditingQuestion && selectedQuestion?.id === entry.id ? (
+                          <>
+                            <TouchableOpacity
+                              style={styles.assessmentActionButton}
+                              onPress={() => {
+                                setIsEditingQuestion(false);
+                                setSelectedQuestion(null);
+                                setEditingQuestion({ category: '', question: '' });
+                              }}
+                              accessibilityRole="button"
+                              accessibilityLabel="Bearbeitung abbrechen"
+                            >
+                              <MaterialCommunityIcons name="close-outline" size={20} color="#6B7280" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.assessmentActionButton}
+                              onPress={handleSaveQuestion}
+                              accessibilityRole="button"
+                              accessibilityLabel="Änderungen speichern"
+                            >
+                              <MaterialCommunityIcons name="check-outline" size={20} color="#059669" />
+                            </TouchableOpacity>
+                          </>
+                        ) : (
+                          <>
+                            <TouchableOpacity
+                              style={styles.assessmentActionButton}
+                              onPress={() => handleViewQuestion(entry)}
+                              accessibilityRole="button"
+                              accessibilityLabel="Frage anzeigen"
+                            >
+                              <MaterialCommunityIcons name="eye-outline" size={20} color="#2563EB" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.assessmentActionButton}
+                              onPress={() => handleEditQuestion(entry)}
+                              accessibilityRole="button"
+                              accessibilityLabel="Frage bearbeiten"
+                            >
+                              <MaterialCommunityIcons name="pencil-outline" size={20} color="#F59E0B" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={styles.assessmentActionButton}
+                              onPress={() => handleDeleteQuestion(entry)}
+                              accessibilityRole="button"
+                              accessibilityLabel="Frage löschen"
+                            >
+                              <MaterialCommunityIcons name="delete-outline" size={20} color="#EF4444" />
+                            </TouchableOpacity>
+                          </>
+                        )}
+                      </View>
+                    </View>
                   </View>
                 ))}
               </ScrollView>
@@ -1343,6 +1525,15 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
+  assessmentCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  assessmentCardContent: {
+    flex: 1,
+    marginRight: 12,
+  },
   assessmentCategory: {
     fontSize: 12,
     fontWeight: '700',
@@ -1356,6 +1547,32 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     lineHeight: 21,
   },
+  assessmentActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  assessmentActionButton: {
+    width: getActionButtonSize(),
+    height: getActionButtonSize(),
+    borderRadius: getActionButtonSize() / 2,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  assessmentEditInput: {
+    marginBottom: responsive.spacing.xs,
+    fontSize: responsive.fontSize.small,
+    paddingVertical: responsive.spacing.xs,
+    paddingHorizontal: responsive.spacing.md,
+  },
+  assessmentEditTextArea: {
+    height: 60,
+    textAlignVertical: 'top',
+    minHeight: 80,
+  },
   lessonDetailWrapper: {
     paddingHorizontal: 24,
     paddingVertical: 32,
@@ -1365,14 +1582,15 @@ const styles = StyleSheet.create({
   lessonActionBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    gap: 16,
+    justifyContent: 'space-between',
+    gap: 8,
     marginBottom: 16,
+    flexWrap: 'wrap',
   },
   lessonQuickButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: responsive.button.medium,
+    height: responsive.button.medium,
+    borderRadius: responsive.button.medium / 2,
     borderWidth: 1,
     borderColor: '#CBD5F5',
     backgroundColor: '#EEF2FF',

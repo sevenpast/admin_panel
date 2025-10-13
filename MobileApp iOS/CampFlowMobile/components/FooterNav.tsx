@@ -15,8 +15,7 @@ export function FooterNav() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 6 }]}>
       {NAV_ITEMS.map((item) => {
-        const matchesPath = pathname === '/' || pathname === '/index';
-        const isActive = matchesPath;
+        const isActive = pathname === item.route || (pathname === '/' && item.route === '/');
         return (
           <TouchableOpacity
             key={item.key}
@@ -28,7 +27,7 @@ export function FooterNav() {
           >
             <MaterialCommunityIcons
               name={item.icon}
-              size={24}
+              size={20}
               color={isActive ? '#2563EB' : '#9CA3AF'}
             />
             <Text style={[styles.label, isActive && styles.labelActive]}>{item.label}</Text>

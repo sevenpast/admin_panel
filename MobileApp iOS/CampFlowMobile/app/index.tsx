@@ -3,6 +3,7 @@ import { SafeAreaView, ScrollView, StyleSheet, Text, TouchableOpacity, View } fr
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { FooterNav } from '../components/FooterNav';
+import { responsive, getTileDimensions } from '@/lib/responsive';
 
 type DashboardTile = {
   id: string;
@@ -28,13 +29,13 @@ const DASHBOARD_TILES: DashboardTile[] = [
     value: '8',
     subtitle: 'Heute geplant',
     accent: '#059669',
-    icon: 'surfboard',
+    icon: 'school',
   },
   {
     id: 'meals',
     title: 'Meals',
-    value: '3',
-    subtitle: 'Service windows',
+    value: '15',
+    subtitle: 'Heute geplant',
     accent: '#DC2626',
     icon: 'silverware-fork-knife',
   },
@@ -55,6 +56,22 @@ const DASHBOARD_TILES: DashboardTile[] = [
     icon: 'clipboard-list-outline',
   },
   {
+    id: 'calendar',
+    title: 'Calendar',
+    value: '7',
+    subtitle: 'Termine heute',
+    accent: '#10B981',
+    icon: 'calendar',
+  },
+  {
+    id: 'staff',
+    title: 'Staff',
+    value: '12',
+    subtitle: 'Team aktiv',
+    accent: '#8B5CF6',
+    icon: 'account-hard-hat',
+  },
+  {
     id: 'alerts',
     title: 'Alert Management',
     value: '5',
@@ -67,14 +84,17 @@ const DASHBOARD_TILES: DashboardTile[] = [
 const TILE_ROUTES: Partial<Record<DashboardTile['id'], string>> = {
   guests: '/guests',
   lessons: '/lessons',
-  meals: '/meals',
   events: '/events',
   inventory: '/inventory',
   alerts: '/alerts',
+  calendar: '/calendar',
+  meals: '/meals',
+  staff: '/staff',
 };
 
 export default function DashboardScreen() {
   const router = useRouter();
+  const tileDimensions = getTileDimensions();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -86,31 +106,31 @@ export default function DashboardScreen() {
             <Text style={styles.subtitle}>CampFlow Mobile</Text>
           </View>
 
-          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-            <View style={styles.tilesWrapper}>
-              {DASHBOARD_TILES.map((tile) => (
-                <TouchableOpacity
-                  key={tile.id}
-                  style={styles.tile}
-                  activeOpacity={0.85}
-                  onPress={() => {
-                    const route = TILE_ROUTES[tile.id];
-                    if (route) {
-                      router.navigate(route as never);
-                    }
-                  }}
+          <View style={styles.tilesWrapper}>
+            {DASHBOARD_TILES.map((tile) => (
+              <TouchableOpacity
+                key={tile.id}
+                style={styles.tile}
+                activeOpacity={0.85}
+                onPress={() => {
+                  const route = TILE_ROUTES[tile.id];
+                  if (route) {
+                    router.navigate(route as never);
+                  }
+                }}
+              >
+                <View style={[styles.iconBadge, { backgroundColor: `${tile.accent}20`, borderColor: tile.accent }]}
                 >
-                  <View style={[styles.iconBadge, { backgroundColor: `${tile.accent}20`, borderColor: tile.accent }]}
-                  >
-                    <MaterialCommunityIcons name={tile.icon} size={26} color={tile.accent} />
-                  </View>
+                  <MaterialCommunityIcons name={tile.icon} size={26} color={tile.accent} />
+                </View>
+                <View style={styles.tileContent}>
                   <Text style={styles.tileTitle}>{tile.title}</Text>
                   <Text style={styles.tileValue}>{tile.value}</Text>
                   <Text style={styles.tileSubtitle}>{tile.subtitle}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         <FooterNav />
       </View>
@@ -147,50 +167,57 @@ const styles = StyleSheet.create({
     color: '#CBD5F5',
     marginTop: 4,
   },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 120,
-    paddingTop: 24,
-  },
   tilesWrapper: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 120,
   },
   tile: {
     width: '47%',
-    minHeight: 150,
+    height: '25%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: responsive.borderRadius.xlarge,
+    padding: responsive.padding.medium,
     shadowColor: '#000000',
     shadowOpacity: 0.08,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
     elevation: 4,
-    marginBottom: 18,
+    marginBottom: responsive.spacing.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  tileContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconBadge: {
-    alignSelf: 'flex-start',
-    padding: 10,
+    padding: responsive.padding.small,
     borderWidth: 2,
-    borderRadius: 14,
+    borderRadius: responsive.borderRadius.medium,
+    marginBottom: responsive.spacing.md,
   },
   tileTitle: {
-    fontSize: 16,
+    fontSize: responsive.fontSize.medium,
     fontWeight: '600',
     color: '#111827',
-    marginTop: 12,
+    textAlign: 'center',
   },
   tileValue: {
-    fontSize: 28,
+    fontSize: responsive.fontSize.xxlarge,
     fontWeight: '700',
     color: '#111827',
-    marginTop: 14,
+    marginTop: 4,
+    textAlign: 'center',
   },
   tileSubtitle: {
-    fontSize: 14,
+    fontSize: responsive.fontSize.small,
     color: '#6B7280',
-    marginTop: 6,
+    marginTop: 2,
+    textAlign: 'center',
   },
 });
