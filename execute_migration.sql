@@ -17,3 +17,4 @@ ALTER TABLE rooms ADD CONSTRAINT rooms_base_name_not_empty CHECK (LENGTH(TRIM(ba
 ALTER TABLE equipment ADD CONSTRAINT equipment_base_name_not_empty CHECK (LENGTH(TRIM(base_name)) > 0);
 
 
+

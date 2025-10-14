@@ -17,8 +17,10 @@ import {
   PhotoIcon,
   KeyIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  QrCodeIcon
 } from '@heroicons/react/24/outline'
+import QRCodeDisplay from '@/components/QRCodeDisplay'
 
 interface CampSettings {
   name: string
@@ -124,7 +126,7 @@ const currencies = [
 ]
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<'camp' | 'user' | 'notifications' | 'users' | 'integrations' | 'maintenance'>('camp')
+  const [activeTab, setActiveTab] = useState<'camp' | 'user' | 'notifications' | 'users' | 'integrations' | 'maintenance' | 'qr'>('camp')
   const [campSettings, setCampSettings] = useState<CampSettings>(mockCampSettings)
   const [userSettings, setUserSettings] = useState<UserSettings>(mockUserSettings)
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(mockNotificationSettings)
@@ -223,6 +225,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: 'camp', label: 'Camp Konfiguration', icon: CogIcon },
+    { id: 'qr', label: 'QR-Code Registrierung', icon: QrCodeIcon },
     { id: 'user', label: 'Benutzer-Profil', icon: UserCircleIcon },
     { id: 'notifications', label: 'Benachrichtigungen', icon: BellIcon },
     { id: 'users', label: 'Benutzer & Rechte', icon: UsersIcon },
@@ -434,6 +437,37 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* QR Code Registration */}
+        {activeTab === 'qr' && (
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">QR-Code Registrierung</h3>
+
+            <div className="mb-6">
+              <p className="text-gray-600 mb-4">
+                Generieren Sie einen QR-Code für Ihr Camp, damit sich Gäste schnell und einfach registrieren können.
+                Der QR-Code enthält die Camp-ID und führt die Gäste direkt zur Registrierungsseite.
+              </p>
+            </div>
+
+            <QRCodeDisplay
+              campId={mockCampSettings.name ? '00000000-0000-0000-0000-000000000001' : undefined}
+              campName={campSettings.name}
+              className="max-w-md mx-auto"
+            />
+
+            <div className="mt-8 p-4 bg-green-50 border border-green-200 rounded-md">
+              <h4 className="text-sm font-medium text-green-800 mb-2">Funktionen:</h4>
+              <ul className="text-sm text-green-700 space-y-1">
+                <li>✓ Automatische Gäste-Registrierung per QR-Code</li>
+                <li>✓ Direkte Integration in die Gästeliste</li>
+                <li>✓ Erfassung von Kontaktdaten und Surf-Paket Wahl</li>
+                <li>✓ Allergien und besondere Anforderungen</li>
+                <li>✓ Download als PNG oder SVG möglich</li>
+              </ul>
             </div>
           </div>
         )}

@@ -24,3 +24,4 @@ ALTER TABLE equipment ADD CONSTRAINT equipment_base_name_not_empty
 CHECK (LENGTH(TRIM(base_name)) > 0);
 
 
+

@@ -6,6 +6,8 @@ export const ERROR_CODES = {
   INVALID_FORMAT: 'invalid_format',
   MISSING_REQUIRED_FIELD: 'missing_required_field',
   INTERNAL_SERVER_ERROR: 'internal_server_error',
+  NOT_FOUND: 'not_found',
+  DUPLICATE_ENTRY: 'duplicate_entry',
 };
 
 /**

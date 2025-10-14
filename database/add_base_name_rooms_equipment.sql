@@ -79,3 +79,4 @@ UNION ALL
 SELECT 'EQUIPMENT' as table_name, name, base_name FROM equipment LIMIT 5;
 
 
+

@@ -17,3 +17,4 @@ CREATE INDEX IF NOT EXISTS idx_equipment_base_name ON equipment(camp_id, base_na
 COMMENT ON COLUMN equipment.base_name IS 'Base name for grouping similar equipment items together';
 
 
+

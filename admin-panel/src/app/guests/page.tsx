@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   MagnifyingGlassIcon,
   PlusIcon,
   EyeIcon,
   PencilIcon,
   TrashIcon,
-  XMarkIcon
+  XMarkIcon,
+  UserCircleIcon
 } from '@heroicons/react/24/outline'
 import { createClient } from '@/lib/supabase'
 
@@ -98,6 +100,7 @@ const ALLERGY_OPTIONS = [
 ]
 
 export default function GuestsPage() {
+  const router = useRouter()
   const [guests, setGuests] = useState<Guest[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
@@ -244,9 +247,13 @@ export default function GuestsPage() {
     setShowCreateModal(true)
   }
 
-  const handleViewGuest = (guest: Guest) => {
+  const handleViewModal = (guest: Guest) => {
     setSelectedGuest(guest)
     setShowViewModal(true)
+  }
+
+  const handleViewGuest = (guest: Guest) => {
+    router.push(`/guests/${guest.id}`)
   }
 
   const handleEditGuest = async (guest: Guest) => {
@@ -689,11 +696,18 @@ export default function GuestsPage() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
                   <button
-                    onClick={() => handleViewGuest(guest)}
+                    onClick={() => handleViewModal(guest)}
                     className="text-blue-600 hover:text-blue-800"
                     title="View"
                   >
                     <EyeIcon className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleViewGuest(guest)}
+                    className="text-purple-600 hover:text-purple-800"
+                    title="Guest Detail"
+                  >
+                    <UserCircleIcon className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => handleEditGuest(guest)}

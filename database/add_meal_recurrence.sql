@@ -86,3 +86,4 @@ CREATE POLICY "Users can delete recurrence rules for their camp" ON public.recur
 
 
 
+
