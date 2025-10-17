@@ -21,6 +21,10 @@ export default function RootLayout() {
         <Stack.Screen name="events/index" />
         <Stack.Screen name="inventory/index" />
         <Stack.Screen name="assessment/index" />
+        <Stack.Screen name="staff/index" />
+        <Stack.Screen name="calendar/index" />
+        <Stack.Screen name="reports/index" />
+        <Stack.Screen name="register/index" />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

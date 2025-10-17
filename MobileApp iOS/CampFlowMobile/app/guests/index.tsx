@@ -18,6 +18,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FooterNav } from '../../components/FooterNav';
 import { responsive } from '@/lib/responsive';
+import { apiService, Guest } from '@/lib/api';
 
 type AssessmentScore = 1 | 2 | 3 | 4 | 5;
 type AssessmentQuestionId =
@@ -62,145 +63,12 @@ const createAssessmentTemplate = (score: AssessmentScore = 3): GuestAssessment =
   return template;
 };
 
-type Guest = {
-  id: string;
-  guestCode: string;
-  name: string;
-  room: string;
-  bed: string;
-  phone: string;
-  instagram: string;
-  allergies: string;
-  isActive: boolean;
-  hasPackage: boolean;
-  assessment: GuestAssessment;
-};
+// Guest type is now imported from API service
 
 type GuestViewMode = 'overview' | 'detail' | 'create';
 type GuestSectionView = 'personal' | 'assessment';
 
-const GUESTS: Guest[] = [
-  {
-    id: 'g1',
-    guestCode: 'GF-1042',
-    name: 'Anna Keller',
-    room: 'River Lodge 12',
-    bed: 'Queen Bed',
-    phone: '+41 78 123 45 67',
-    instagram: '@anna_travels',
-    allergies: 'Gluten, Erdnüsse',
-    isActive: true,
-    hasPackage: true,
-    assessment: {
-      arrival_orientation: 5,
-      safety_briefing: 5,
-      equipment_handling: 4,
-      schedule_punctuality: 5,
-      team_collaboration: 4,
-      water_confidence: 5,
-      outdoor_readiness: 4,
-      health_awareness: 5,
-      communication_skills: 4,
-      goal_commitment: 5,
-    },
-  },
-  {
-    id: 'g2',
-    guestCode: 'GF-1055',
-    name: 'Marco Lüthi',
-    room: 'Mountain Cabin 03',
-    bed: 'Single Bed',
-    phone: '+41 79 456 78 90',
-    instagram: '@marco_luthi',
-    allergies: 'Keine',
-    isActive: true,
-    hasPackage: false,
-    assessment: {
-      arrival_orientation: 4,
-      safety_briefing: 4,
-      equipment_handling: 3,
-      schedule_punctuality: 5,
-      team_collaboration: 3,
-      water_confidence: 3,
-      outdoor_readiness: 4,
-      health_awareness: 4,
-      communication_skills: 4,
-      goal_commitment: 4,
-    },
-  },
-  {
-    id: 'g3',
-    guestCode: 'GF-1061',
-    name: 'Sofia Giordano',
-    room: 'Garden Suite 05',
-    bed: 'King Bed',
-    phone: '+39 320 555 11 22',
-    instagram: '@sofia_gio',
-    allergies: 'Laktose',
-    isActive: true,
-    hasPackage: true,
-    assessment: {
-      arrival_orientation: 5,
-      safety_briefing: 5,
-      equipment_handling: 5,
-      schedule_punctuality: 4,
-      team_collaboration: 5,
-      water_confidence: 5,
-      outdoor_readiness: 4,
-      health_awareness: 4,
-      communication_skills: 5,
-      goal_commitment: 5,
-    },
-  },
-  {
-    id: 'g4',
-    guestCode: 'GF-1028',
-    name: 'Hannah Kim',
-    room: 'Lake View 07',
-    bed: 'Twin Bed',
-    phone: '+1 415 555 0148',
-    instagram: '@hannahk',
-    allergies: 'Keine',
-    isActive: false,
-    hasPackage: false,
-    assessment: {
-      arrival_orientation: 2,
-      safety_briefing: 2,
-      equipment_handling: 2,
-      schedule_punctuality: 3,
-      team_collaboration: 3,
-      water_confidence: 2,
-      outdoor_readiness: 2,
-      health_awareness: 3,
-      communication_skills: 3,
-      goal_commitment: 2,
-    },
-  },
-  {
-    id: 'g5',
-    guestCode: 'GF-1103',
-    name: 'Daniel Steiner',
-    room: 'Forest Cabin 09',
-    bed: 'Bunk Bed',
-    phone: '+41 76 333 22 11',
-    instagram: '@dan_steiner',
-    allergies: 'Haselnüsse',
-    isActive: false,
-    hasPackage: true,
-    assessment: {
-      arrival_orientation: 4,
-      safety_briefing: 4,
-      equipment_handling: 4,
-      schedule_punctuality: 4,
-      team_collaboration: 4,
-      water_confidence: 3,
-      outdoor_readiness: 4,
-      health_awareness: 5,
-      communication_skills: 4,
-      goal_commitment: 4,
-    },
-  },
-];
+// Guests will be fetched from the API
 
 const STATUS_META = {
   active: { label: 'Aktiv', color: '#2563EB', icon: 'check-circle-outline' as const },
@@ -223,25 +91,25 @@ const FILTERS: FilterDefinition[] = [
     key: 'active',
     label: 'Aktiv',
     icon: STATUS_META.active.icon,
-    predicate: (guest) => guest.isActive,
+    predicate: (guest) => guest.is_active,
   },
   {
     key: 'inactive',
     label: 'Inaktiv',
     icon: STATUS_META.inactive.icon,
-    predicate: (guest) => !guest.isActive,
+    predicate: (guest) => !guest.is_active,
   },
   {
     key: 'package',
     label: 'Im Package',
     icon: STATUS_META.package.icon,
-    predicate: (guest) => guest.hasPackage,
+    predicate: (guest) => guest.has_surf_package,
   },
   {
     key: 'noPackage',
     label: 'Nicht im Package',
     icon: STATUS_META.noPackage.icon,
-    predicate: (guest) => !guest.hasPackage,
+    predicate: (guest) => !guest.has_surf_package,
   },
 ];
 
@@ -255,17 +123,14 @@ type FormFieldProps = {
   style?: ViewStyle;
 };
 
-const buildNewGuest = (): Omit<Guest, 'id'> => ({
-  guestCode: '',
+const buildNewGuest = (): Partial<Guest> => ({
+  guest_code: '',
   name: '',
-  room: '',
-  bed: '',
   phone: '',
   instagram: '',
   allergies: '',
-  isActive: true,
-  hasPackage: false,
-  assessment: createAssessmentTemplate(),
+  is_active: true,
+  has_surf_package: false,
 });
 
 export default function GuestsScreen() {
@@ -278,13 +143,35 @@ export default function GuestsScreen() {
   const [activeFilters, setActiveFilters] = useState<GuestFilterKey[]>([]);
   const [editableGuest, setEditableGuest] = useState<Guest | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [newGuest, setNewGuest] = useState<Omit<Guest, 'id'>>(() => buildNewGuest());
+  const [newGuest, setNewGuest] = useState<Partial<Guest>>(() => buildNewGuest());
   const [isRoomPickerOpen, setRoomPickerOpen] = useState(false);
   const [isBedPickerOpen, setBedPickerOpen] = useState(false);
   const [selectedAllergyOptions, setSelectedAllergyOptions] = useState<string[]>([]);
   const [customAllergy, setCustomAllergy] = useState('');
   const [detailSection, setDetailSection] = useState<GuestSectionView>('personal');
   const [createSection, setCreateSection] = useState<GuestSectionView>('personal');
+  const [guests, setGuests] = useState<Guest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch guests data
+  const fetchGuests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const guestsData = await apiService.getGuests();
+      setGuests(guestsData);
+    } catch (err) {
+      console.error('Error fetching guests:', err);
+      setError('Failed to load guests');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGuests();
+  }, []);
 
   useEffect(() => {
     if (mode === 'detail' && selectedGuest) {
@@ -315,15 +202,15 @@ export default function GuestsScreen() {
   const filteredGuests = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
-    return GUESTS.filter((guest) => {
+    return guests.filter((guest) => {
       const matchesSearch = normalizedSearch
         ? guest.name.toLowerCase().includes(normalizedSearch) ||
-          guest.guestCode.toLowerCase().includes(normalizedSearch) ||
-          guest.room.toLowerCase().includes(normalizedSearch) ||
-          guest.bed.toLowerCase().includes(normalizedSearch) ||
+          guest.guest_code.toLowerCase().includes(normalizedSearch) ||
+          guest.room_assignment?.room_name.toLowerCase().includes(normalizedSearch) ||
+          guest.room_assignment?.bed_name.toLowerCase().includes(normalizedSearch) ||
           guest.phone.toLowerCase().includes(normalizedSearch) ||
-          guest.instagram.toLowerCase().includes(normalizedSearch) ||
-          guest.allergies.toLowerCase().includes(normalizedSearch)
+          guest.instagram?.toLowerCase().includes(normalizedSearch) ||
+          guest.allergies?.toLowerCase().includes(normalizedSearch)
         : true;
 
       const matchesFilters =
@@ -331,10 +218,10 @@ export default function GuestsScreen() {
 
       return matchesSearch && matchesFilters;
     });
-  }, [searchTerm, activeFilters]);
+  }, [guests, searchTerm, activeFilters]);
 
   const renderGuestCard = ({ item }: { item: Guest }) => {
-    const activityMeta = item.isActive ? STATUS_META.active : STATUS_META.inactive;
+    const activityMeta = item.is_active ? STATUS_META.active : STATUS_META.inactive;
 
     return (
       <TouchableOpacity
@@ -349,9 +236,9 @@ export default function GuestsScreen() {
         <View style={styles.guestCardHeader}>
           <Text style={styles.guestName}>{item.name}</Text>
         </View>
-        <Text style={styles.guestMeta}>Gast-ID: {item.guestCode}</Text>
+        <Text style={styles.guestMeta}>Gast-ID: {item.guest_code}</Text>
         <Text style={styles.guestMetaSecondary}>Tel: {item.phone}</Text>
-        <Text style={styles.guestMetaSecondary}>IG: {item.instagram}</Text>
+        <Text style={styles.guestMetaSecondary}>IG: {item.instagram || 'N/A'}</Text>
         <View style={styles.guestBadgeRow}>
           <View
             style={[
@@ -366,49 +253,60 @@ export default function GuestsScreen() {
             <Text style={[styles.statusBadgeText, { color: activityMeta.color }]}>{activityMeta.label}</Text>
           </View>
         </View>
-        <Text style={styles.guestRoom}>{item.room}</Text>
-        <Text style={styles.guestMetaSecondary}>Bett: {item.bed}</Text>
+        <Text style={styles.guestRoom}>{item.room_assignment?.room_name || 'No room assigned'}</Text>
+        <Text style={styles.guestMetaSecondary}>Bett: {item.room_assignment?.bed_name || 'No bed assigned'}</Text>
         <Text style={styles.guestMetaSecondary}>Allergien: {item.allergies || 'Keine'}</Text>
       </TouchableOpacity>
     );
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (!editableGuest) {
       return;
     }
 
-    setSelectedGuest(editableGuest);
-    setIsEditing(false);
-    Alert.alert('Gast aktualisiert', 'Dies ist ein Demo-Vorgang ohne echte Speicherung.');
+    try {
+      const updatedGuest = await apiService.updateGuest(editableGuest.id, editableGuest);
+      setSelectedGuest(updatedGuest);
+      setGuests(prev => prev.map(g => g.id === updatedGuest.id ? updatedGuest : g));
+      setIsEditing(false);
+      Alert.alert('Success', 'Guest updated successfully');
+    } catch (error) {
+      console.error('Error updating guest:', error);
+      Alert.alert('Error', 'Failed to update guest');
+    }
   };
 
-  const handleCreateGuest = () => {
+  const handleCreateGuest = async () => {
     const generatedGuestCode = `GF-${Math.floor(1000 + Math.random() * 9000)}`;
     const combinedAllergies = [
       ...selectedAllergyOptions,
       ...(customAllergy.trim() ? [customAllergy.trim()] : []),
     ];
-    const allergyText = combinedAllergies.length ? combinedAllergies.join(', ') : 'Keine';
-    const { assessment } = newGuest;
-    const assessmentSummary = [
-      'Assessment Scores:',
-      ...ASSESSMENT_QUESTIONS.map(
-        (question) => `- ${question.label}: ${assessment[question.id]}/5`,
-      ),
-    ].join('\n');
+    const allergyText = combinedAllergies.length ? combinedAllergies.join(', ') : '';
 
-    Alert.alert(
-      'Gast erstellt',
-      `Dummy-Gast ${generatedGuestCode} wurde angelegt.\nAllergien: ${allergyText}\n\n${assessmentSummary}`,
-    );
+    try {
+      const guestData = {
+        ...newGuest,
+        guest_code: generatedGuestCode,
+        allergies: allergyText,
+      };
 
-    setNewGuest(buildNewGuest());
-    setSelectedAllergyOptions([]);
-    setCustomAllergy('');
-    setRoomPickerOpen(false);
-    setBedPickerOpen(false);
-    setMode('overview');
+      const createdGuest = await apiService.createGuest(guestData);
+      setGuests(prev => [...prev, createdGuest]);
+      
+      Alert.alert('Success', `Guest ${generatedGuestCode} created successfully`);
+
+      setNewGuest(buildNewGuest());
+      setSelectedAllergyOptions([]);
+      setCustomAllergy('');
+      setRoomPickerOpen(false);
+      setBedPickerOpen(false);
+      setMode('overview');
+    } catch (error) {
+      console.error('Error creating guest:', error);
+      Alert.alert('Error', 'Failed to create guest');
+    }
   };
 
   const Overview = () => (
@@ -467,22 +365,42 @@ export default function GuestsScreen() {
           );
         })}
       </View>
-      <FlatList
-        data={filteredGuests}
-        keyExtractor={(item) => item.id}
-        renderItem={renderGuestCard}
-        contentContainerStyle={styles.guestListContent}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="account-search" size={36} color="#9CA3AF" />
-            <Text style={styles.emptyStateTitle}>Keine Gäste gefunden</Text>
-            <Text style={styles.emptyStateText}>
-              Passe Suche oder Filter an, um weitere Gäste zu sehen.
-            </Text>
-          </View>
-        }
-      />
+      
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <MaterialCommunityIcons name="loading" size={32} color="#6B7280" />
+          <Text style={styles.loadingText}>Loading guests...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <MaterialCommunityIcons name="alert-circle" size={32} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchGuests}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredGuests}
+          keyExtractor={(item) => item.id}
+          renderItem={renderGuestCard}
+          contentContainerStyle={styles.guestListContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="account-search" size={36} color="#9CA3AF" />
+              <Text style={styles.emptyStateTitle}>Keine Gäste gefunden</Text>
+              <Text style={styles.emptyStateText}>
+                Passe Suche oder Filter an, um weitere Gäste zu sehen.
+              </Text>
+            </View>
+          }
+        />
+      )}
+      
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: headerTint }]}
         onPress={() => setMode('create')}
@@ -1218,6 +1136,40 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     paddingHorizontal: responsive.padding.large,
     marginTop: 6,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 12,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
   detailWrapper: {
     paddingHorizontal: responsive.padding.large,

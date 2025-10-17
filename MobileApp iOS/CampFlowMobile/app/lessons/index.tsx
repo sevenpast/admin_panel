@@ -18,6 +18,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { FooterNav } from '../../components/FooterNav';
 import { responsive, getActionButtonSize } from '@/lib/responsive';
+import { apiService, Lesson } from '@/lib/api';
 
 const SURF_LEVELS = ['Nicht zugewiesen', 'Anfänger', 'Fortgeschritten', 'Profi'];
 
@@ -91,34 +92,19 @@ type LevelFilterDefinition = {
   predicate: (guest: SurfGuest) => boolean;
 };
 
-type SurfLesson = {
-  id: string;
-  title: string;
-  lessonCode: string;
-  instructorId: string;
-  instructorName: string;
-  startTime: string;
-  endTime: string;
-  maxParticipants: number;
-  skillLevel: 'beginner' | 'intermediate' | 'advanced';
-  location: string;
-  price: number;
-  status: 'scheduled' | 'completed' | 'cancelled';
-  description: string;
-  createdAt: string;
-};
+// Lesson type is now imported from API service
 
 type LessonDraft = {
   title: string;
-  lessonCode: string;
-  instructorId: string;
-  startTime: string;
-  endTime: string;
-  maxParticipants: string;
-  skillLevel: SurfLesson['skillLevel'];
+  lesson_code: string;
+  instructor_id: string;
+  start_time: string;
+  end_time: string;
+  max_participants: string;
+  skill_level: Lesson['skill_level'];
   location: string;
   price: string;
-  status: SurfLesson['status'];
+  status: Lesson['status'];
   description: string;
 };
 
@@ -161,56 +147,7 @@ const OVERVIEW_TOGGLES: Array<{ key: OverviewSection; label: string; icon: keyof
   { key: 'assessment', label: 'Assessment', icon: 'clipboard-text-outline' },
 ];
 
-const INITIAL_LESSONS: SurfLesson[] = [
-  {
-    id: 'lesson-1',
-    lessonCode: 'L-MORNING01',
-    title: 'Morning Beginner Surf Session',
-    instructorId: INSTRUCTORS[0].id,
-    instructorName: INSTRUCTORS[0].name,
-    startTime: new Date().toISOString().split('T')[0] + 'T08:00',
-    endTime: new Date().toISOString().split('T')[0] + 'T09:30',
-    maxParticipants: 8,
-    skillLevel: 'beginner',
-    location: 'Main Beach',
-    price: 79,
-    status: 'scheduled',
-    description: 'Introduction to surfing basics, stance, and pop-up drills.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'lesson-2',
-    lessonCode: 'L-INT001',
-    title: 'Intermediate Reef Coaching',
-    instructorId: INSTRUCTORS[1].id,
-    instructorName: INSTRUCTORS[1].name,
-    startTime: new Date().toISOString().split('T')[0] + 'T11:00',
-    endTime: new Date().toISOString().split('T')[0] + 'T12:30',
-    maxParticipants: 6,
-    skillLevel: 'intermediate',
-    location: 'Reef Break A',
-    price: 95,
-    status: 'scheduled',
-    description: 'Refine line selection and improve turning technique on the reef.',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'lesson-3',
-    lessonCode: 'L-ADV002',
-    title: 'Advanced Wave Riding Lab',
-    instructorId: INSTRUCTORS[2].id,
-    instructorName: INSTRUCTORS[2].name,
-    startTime: new Date().toISOString().split('T')[0] + 'T15:30',
-    endTime: new Date().toISOString().split('T')[0] + 'T17:00',
-    maxParticipants: 4,
-    skillLevel: 'advanced',
-    location: 'North Point',
-    price: 120,
-    status: 'completed',
-    description: 'Video analysis session focusing on rail engagement and power turns.',
-    createdAt: new Date().toISOString(),
-  },
-];
+// Lessons will be fetched from the API
 
 const ASSESSMENT_BLUEPRINT = [
   { id: 'q1', category: 'Experience', question: 'Wie viele Jahre surfst du bereits aktiv?' },
@@ -222,12 +159,12 @@ const ASSESSMENT_BLUEPRINT = [
 
 const INITIAL_LESSON_DRAFT: LessonDraft = {
   title: '',
-  lessonCode: '',
-  instructorId: INSTRUCTORS[0].id,
-  startTime: '',
-  endTime: '',
-  maxParticipants: '',
-  skillLevel: 'beginner',
+  lesson_code: '',
+  instructor_id: INSTRUCTORS[0].id,
+  start_time: '',
+  end_time: '',
+  max_participants: '',
+  skill_level: 'beginner',
   location: '',
   price: '0', // Preis wird nicht mehr eingegeben, aber für Kompatibilität beibehalten
   status: 'scheduled',
@@ -244,15 +181,36 @@ export default function LessonsScreen() {
   const [selectedGuest, setSelectedGuest] = useState<SurfGuest | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<string>('Nicht zugewiesen');
   const [overviewSection, setOverviewSection] = useState<OverviewSection>('surfers');
-  const [lessons, setLessons] = useState<SurfLesson[]>(INITIAL_LESSONS);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
   const [newLesson, setNewLesson] = useState<LessonDraft>(INITIAL_LESSON_DRAFT);
-  const [selectedLesson, setSelectedLesson] = useState<SurfLesson | null>(null);
-  const [editableLesson, setEditableLesson] = useState<SurfLesson | null>(null);
+  const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
+  const [editableLesson, setEditableLesson] = useState<Lesson | null>(null);
   const [isLessonEditing, setIsLessonEditing] = useState(false);
   const [assessmentQuestions, setAssessmentQuestions] = useState(ASSESSMENT_BLUEPRINT);
   const [selectedQuestion, setSelectedQuestion] = useState<typeof ASSESSMENT_BLUEPRINT[0] | null>(null);
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<{ category: string; question: string }>({ category: '', question: '' });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch lessons data
+  const fetchLessons = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const lessonsData = await apiService.getLessons();
+      setLessons(lessonsData);
+    } catch (err) {
+      console.error('Error fetching lessons:', err);
+      setError('Failed to load lessons');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLessons();
+  }, []);
 
   useEffect(() => {
     if (mode === 'guestDetail' && selectedGuest) {
@@ -318,14 +276,14 @@ export default function LessonsScreen() {
     </TouchableOpacity>
   );
 
-  const handleCreateLesson = () => {
+  const handleCreateLesson = async () => {
     const title = newLesson.title.trim();
-    const lessonCode = newLesson.lessonCode.trim() || `L-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    const startTime = newLesson.startTime.trim();
-    const endTime = newLesson.endTime.trim();
+    const lessonCode = newLesson.lesson_code.trim() || `L-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const startTime = newLesson.start_time.trim();
+    const endTime = newLesson.end_time.trim();
     const location = newLesson.location.trim();
     const description = newLesson.description.trim();
-    const instructor = INSTRUCTORS.find((item) => item.id === newLesson.instructorId) ?? INSTRUCTORS[0];
+    const instructor = INSTRUCTORS.find((item) => item.id === newLesson.instructor_id) ?? INSTRUCTORS[0];
 
     if (!title) {
       Alert.alert('Titel erforderlich', 'Bitte gib den Titel der Surf Lesson an.');
@@ -337,31 +295,35 @@ export default function LessonsScreen() {
       return;
     }
 
-    const lessonToAdd: SurfLesson = {
-      id: `lesson-${Date.now()}`,
-      lessonCode,
-      title,
-      instructorId: instructor.id,
-      instructorName: instructor.name,
-      startTime,
-      endTime,
-      maxParticipants: Number.parseInt(newLesson.maxParticipants, 10) || 0,
-      skillLevel: newLesson.skillLevel,
-      location: location || 'tbd',
-      price: 0, // Preis wird nicht mehr eingegeben
-      status: newLesson.status,
-      description: description || 'Noch keine Beschreibung hinterlegt.',
-      createdAt: new Date().toISOString(),
-    };
+    try {
+      const lessonData = {
+        title,
+        lesson_code: lessonCode,
+        instructor_id: instructor.id,
+        instructor_name: instructor.name,
+        start_time: startTime,
+        end_time: endTime,
+        max_participants: Number.parseInt(newLesson.max_participants, 10) || 0,
+        skill_level: newLesson.skill_level,
+        location: location || 'tbd',
+        price: 0, // Preis wird nicht mehr eingegeben
+        status: newLesson.status,
+        description: description || 'Noch keine Beschreibung hinterlegt.',
+      };
 
-    setLessons((prev) => [...prev, lessonToAdd]);
-    Alert.alert('Surf Lesson erstellt', `${lessonToAdd.title} wurde angelegt (Demo).`);
-    setNewLesson(INITIAL_LESSON_DRAFT);
-    setMode('overview');
-    setOverviewSection('sessions');
+      const createdLesson = await apiService.createLesson(lessonData);
+      setLessons((prev) => [...prev, createdLesson]);
+      Alert.alert('Success', `Lesson "${createdLesson.title}" created successfully`);
+      setNewLesson(INITIAL_LESSON_DRAFT);
+      setMode('overview');
+      setOverviewSection('sessions');
+    } catch (error) {
+      console.error('Error creating lesson:', error);
+      Alert.alert('Error', 'Failed to create lesson');
+    }
   };
 
-  const handleLessonSave = () => {
+  const handleLessonSave = async () => {
     if (!editableLesson) {
       return;
     }
@@ -372,27 +334,28 @@ export default function LessonsScreen() {
       return;
     }
 
-    if (!editableLesson.startTime || !editableLesson.endTime) {
+    if (!editableLesson.start_time || !editableLesson.end_time) {
       Alert.alert('Zeitplan unvollständig', 'Bitte Start- und Endzeit im ISO-Format ergänzen.');
       return;
     }
 
-    const instructor = INSTRUCTORS.find((item) => item.id === editableLesson.instructorId);
+    try {
+      const updatedLesson = await apiService.updateLesson(editableLesson.id, {
+        title: trimmedTitle,
+        lesson_code: editableLesson.lesson_code.trim() || editableLesson.lesson_code,
+        location: editableLesson.location.trim() || editableLesson.location,
+        description: editableLesson.description.trim(),
+      });
 
-    const updatedLesson: SurfLesson = {
-      ...editableLesson,
-      title: trimmedTitle,
-      lessonCode: editableLesson.lessonCode.trim() || editableLesson.lessonCode,
-      location: editableLesson.location.trim() || editableLesson.location,
-      description: editableLesson.description.trim(),
-      instructorName: instructor?.name ?? editableLesson.instructorName,
-    };
-
-    setLessons((prev) => prev.map((lesson) => (lesson.id === updatedLesson.id ? updatedLesson : lesson)));
-    setSelectedLesson(updatedLesson);
-    setEditableLesson(updatedLesson);
-    setIsLessonEditing(false);
-    Alert.alert('Lesson aktualisiert', `${updatedLesson.title} wurde aktualisiert (Demo).`);
+      setLessons((prev) => prev.map((lesson) => (lesson.id === updatedLesson.id ? updatedLesson : lesson)));
+      setSelectedLesson(updatedLesson);
+      setEditableLesson(updatedLesson);
+      setIsLessonEditing(false);
+      Alert.alert('Success', `Lesson "${updatedLesson.title}" updated successfully`);
+    } catch (error) {
+      console.error('Error updating lesson:', error);
+      Alert.alert('Error', 'Failed to update lesson');
+    }
   };
 
   const handleLessonDelete = () => {
@@ -400,19 +363,25 @@ export default function LessonsScreen() {
       return;
     }
 
-    Alert.alert('Lesson löschen', 'Du bist dabei, diese Lesson (Demo) zu entfernen.', [
+    Alert.alert('Lesson löschen', 'Du bist dabei, diese Lesson zu entfernen.', [
       { text: 'Abbrechen', style: 'cancel' },
       {
         text: 'Löschen',
         style: 'destructive',
-        onPress: () => {
-          setLessons((prev) => prev.filter((lesson) => lesson.id !== selectedLesson.id));
-          setSelectedLesson(null);
-          setEditableLesson(null);
-          setIsLessonEditing(false);
-          setOverviewSection('sessions');
-          setMode('overview');
-          Alert.alert('Lesson gelöscht', 'Dummy Löschaktion ausgeführt.');
+        onPress: async () => {
+          try {
+            await apiService.deleteLesson(selectedLesson.id);
+            setLessons((prev) => prev.filter((lesson) => lesson.id !== selectedLesson.id));
+            setSelectedLesson(null);
+            setEditableLesson(null);
+            setIsLessonEditing(false);
+            setOverviewSection('sessions');
+            setMode('overview');
+            Alert.alert('Success', 'Lesson deleted successfully');
+          } catch (error) {
+            console.error('Error deleting lesson:', error);
+            Alert.alert('Error', 'Failed to delete lesson');
+          }
         },
       },
     ]);
@@ -1125,53 +1094,79 @@ export default function LessonsScreen() {
 
             {overviewSection === 'sessions' && (
               <ScrollView contentContainerStyle={styles.lessonContent} showsVerticalScrollIndicator={false}>
-                {lessons.map((lesson) => {
-                  const skillLabel =
-                    LESSON_SKILL_LEVELS.find((level) => level.value === lesson.skillLevel)?.label ??
-                    lesson.skillLevel;
-                  const statusMeta = LESSON_STATUS_META[lesson.status];
-
-                  return (
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <MaterialCommunityIcons name="loading" size={32} color="#6B7280" />
+                    <Text style={styles.loadingText}>Loading lessons...</Text>
+                  </View>
+                ) : error ? (
+                  <View style={styles.errorContainer}>
+                    <MaterialCommunityIcons name="alert-circle" size={32} color="#EF4444" />
+                    <Text style={styles.errorText}>{error}</Text>
                     <TouchableOpacity
-                      key={lesson.id}
-                      style={styles.lessonCard}
-                      activeOpacity={0.82}
-                      onPress={() => {
-                        setSelectedGuest(null);
-                        setSelectedLesson(lesson);
-                        setMode('lessonDetail');
-                      }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${lesson.title} öffnen`}
+                      style={styles.retryButton}
+                      onPress={fetchLessons}
                     >
-                      <View style={styles.lessonCardHeader}>
-                        <View>
-                          <Text style={styles.lessonTitle}>{lesson.title}</Text>
-                          <Text style={styles.lessonMetaLine}>
-                            {lesson.startTime} - {lesson.endTime} · {lesson.location}
-                          </Text>
-                          <Text style={styles.lessonSubMeta}>Instructor: {lesson.instructorName}</Text>
-                        </View>
-                        <View style={styles.lessonBadges}>
-                          <Text style={[styles.lessonBadge, styles.lessonCodeBadge]}>{lesson.lessonCode}</Text>
-                          <Text style={[styles.lessonBadge, styles.lessonSkillBadge]}>{skillLabel}</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.lessonDescription}>{lesson.description}</Text>
-                      <View style={styles.lessonCardFooter}>
-                        <Text style={styles.lessonInfoLine}>
-                          {lesson.maxParticipants} Plätze
-                        </Text>
-                        <View
-                          style={[styles.lessonStatusBadge, { borderColor: statusMeta.color, backgroundColor: `${statusMeta.color}15` }]}
-                        >
-                          <MaterialCommunityIcons name={statusMeta.icon} size={16} color={statusMeta.color} />
-                          <Text style={[styles.lessonStatusLabel, { color: statusMeta.color }]}>{statusMeta.label}</Text>
-                        </View>
-                      </View>
+                      <Text style={styles.retryButtonText}>Retry</Text>
                     </TouchableOpacity>
-                  );
-                })}
+                  </View>
+                ) : lessons.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <MaterialCommunityIcons name="school-outline" size={36} color="#9CA3AF" />
+                    <Text style={styles.emptyStateTitle}>No lessons found</Text>
+                    <Text style={styles.emptyStateText}>
+                      Create your first lesson to get started.
+                    </Text>
+                  </View>
+                ) : (
+                  lessons.map((lesson) => {
+                    const skillLabel =
+                      LESSON_SKILL_LEVELS.find((level) => level.value === lesson.skill_level)?.label ??
+                      lesson.skill_level;
+                    const statusMeta = LESSON_STATUS_META[lesson.status];
+
+                    return (
+                      <TouchableOpacity
+                        key={lesson.id}
+                        style={styles.lessonCard}
+                        activeOpacity={0.82}
+                        onPress={() => {
+                          setSelectedGuest(null);
+                          setSelectedLesson(lesson);
+                          setMode('lessonDetail');
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${lesson.title} öffnen`}
+                      >
+                        <View style={styles.lessonCardHeader}>
+                          <View>
+                            <Text style={styles.lessonTitle}>{lesson.title}</Text>
+                            <Text style={styles.lessonMetaLine}>
+                              {lesson.start_time} - {lesson.end_time} · {lesson.location}
+                            </Text>
+                            <Text style={styles.lessonSubMeta}>Instructor: {lesson.instructor_name}</Text>
+                          </View>
+                          <View style={styles.lessonBadges}>
+                            <Text style={[styles.lessonBadge, styles.lessonCodeBadge]}>{lesson.lesson_code}</Text>
+                            <Text style={[styles.lessonBadge, styles.lessonSkillBadge]}>{skillLabel}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.lessonDescription}>{lesson.description}</Text>
+                        <View style={styles.lessonCardFooter}>
+                          <Text style={styles.lessonInfoLine}>
+                            {lesson.max_participants} Plätze
+                          </Text>
+                          <View
+                            style={[styles.lessonStatusBadge, { borderColor: statusMeta.color, backgroundColor: `${statusMeta.color}15` }]}
+                          >
+                            <MaterialCommunityIcons name={statusMeta.icon} size={16} color={statusMeta.color} />
+                            <Text style={[styles.lessonStatusLabel, { color: statusMeta.color }]}>{statusMeta.label}</Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
               </ScrollView>
             )}
 
@@ -1879,5 +1874,56 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 12,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#EF4444',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#2563EB',
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    marginTop: 12,
+  },
+  emptyStateText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#6B7280',
+    paddingHorizontal: 24,
+    marginTop: 6,
   },
 });

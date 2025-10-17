@@ -13,7 +13,8 @@ import {
   UsersIcon,
   DocumentDuplicateIcon,
   RectangleStackIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline'
 import UnifiedCard from '@/components/common/UnifiedCard'
 
@@ -123,7 +124,7 @@ export default function EventManagement() {
         const eventsData = result.success ? result.data : result
         setEvents(Array.isArray(eventsData) ? eventsData : [])
       } else {
-        console.error('Error loading events:', await response.text())
+        console.error('Error loading events:', response?.statusText || 'Network error')
         setEvents([])
       }
     } catch (err) {
@@ -142,7 +143,7 @@ export default function EventManagement() {
         const staffData = result.success ? result.data : result
         setStaff(Array.isArray(staffData) ? staffData : [])
       } else {
-        console.error('Error loading staff:', await response?.text())
+        console.error('Error loading staff:', response?.statusText || 'Network error')
         setStaff([])
       }
     } catch (err) {

@@ -5,6 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: 'view-dashboard', route: '/' },
+  { key: 'guests', label: 'Guests', icon: 'account-group', route: '/guests' },
+  { key: 'lessons', label: 'Lessons', icon: 'school', route: '/lessons' },
+  { key: 'events', label: 'Events', icon: 'calendar-star', route: '/events' },
+  { key: 'staff', label: 'Staff', icon: 'account-hard-hat', route: '/staff' },
 ] as const;
 
 export function FooterNav() {

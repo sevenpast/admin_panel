@@ -140,14 +140,18 @@ export default function KitchenOverviewComponent({ selectedDate, onDateChange }:
 
   const loadGuests = async () => {
     try {
-      const response = await fetch('/api/guests')
-      if (response.ok) {
+      const response = await fetch('/api/guests').catch(() => null)
+      if (response?.ok) {
         const result = await response.json()
         const guestsData = result.success ? result.data : result
         setGuests(guestsData || [])
+      } else {
+        console.error('Error loading guests:', response?.statusText || 'Network error')
+        setGuests([])
       }
     } catch (error) {
       console.error('Error loading guests:', error)
+      setGuests([])
     }
   }
 
