@@ -70,7 +70,28 @@ export async function GET() {
       return apiError(error.message, 'DB_FETCH_FAILED', 500);
     }
 
-    return apiSuccess(data || []);
+    // Transform the data to match frontend expectations
+    const transformedData = (data || []).map(guest => {
+      // Find the current active bed assignment
+      const activeBedAssignment = guest.bed_assignments?.find(assignment => 
+        assignment.status === 'active'
+      );
+      
+      // Transform bed assignment to room assignment format expected by frontend
+      const room_assignment = activeBedAssignment ? {
+        room_number: activeBedAssignment.beds?.rooms?.room_number || activeBedAssignment.beds?.rooms?.name || 'Unknown',
+        bed_name: activeBedAssignment.beds?.identifier || 'Unknown'
+      } : undefined;
+
+      return {
+        ...guest,
+        room_assignment,
+        // Remove the bed_assignments array as it's not needed in frontend
+        bed_assignments: undefined
+      };
+    });
+
+    return apiSuccess(transformedData);
   } catch (e: any) {
     console.error('Error in GET /api/guests:', e);
     return apiError(e.message || 'An unknown error occurred', 'INTERNAL_SERVER_ERROR', 500);
@@ -114,7 +135,30 @@ export async function POST(request: NextRequest) {
 
     // Generate guest_id
     const guestId = `G-${Math.random().toString(36).substr(2, 10).toUpperCase()}`;
-    
+
+    // Map invalid surf level values to valid ones
+    if (body.surf_level) {
+      const validLevels = ['beginner', 'intermediate', 'advanced']
+      if (!validLevels.includes(body.surf_level)) {
+        // Map common invalid values to closest valid ones
+        switch (body.surf_level.toLowerCase()) {
+          case 'expert':
+          case 'professional':
+          case 'pro':
+            body.surf_level = 'advanced'
+            break
+          case 'novice':
+          case 'new':
+          case 'starter':
+            body.surf_level = 'beginner'
+            break
+          default:
+            // For any other invalid value, default to intermediate
+            body.surf_level = 'intermediate'
+        }
+      }
+    }
+
     const guestData = {
       ...body,
       guest_id: guestId,

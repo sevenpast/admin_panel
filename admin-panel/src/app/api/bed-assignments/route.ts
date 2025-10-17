@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
     // Check if bed is available
     const { data: bed, error: bedError } = await supabase
       .from('beds')
-      .select('id, capacity, current_occupancy, is_active')
+      .select('id, capacity, is_active')
       .eq('id', bed_id)
       .single()
 
@@ -118,10 +118,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot assign inactive bed' }, { status: 400 })
     }
 
-    // Check if bed has capacity
-    if (bed.current_occupancy >= bed.capacity) {
-      return NextResponse.json({ 
-        error: `Bed is at full capacity (${bed.current_occupancy}/${bed.capacity})` 
+    // Check actual bed capacity by counting active assignments
+    const { count: activeAssignments, error: countError } = await supabase
+      .from('bed_assignments')
+      .select('*', { count: 'exact', head: true })
+      .eq('bed_id', bed_id)
+      .eq('status', 'active')
+
+    if (countError) {
+      return NextResponse.json({ error: 'Error checking bed capacity' }, { status: 500 })
+    }
+
+    const currentOccupancy = activeAssignments || 0
+    if (currentOccupancy >= bed.capacity) {
+      return NextResponse.json({
+        error: `Bed is at full capacity (${currentOccupancy}/${bed.capacity})`
       }, { status: 400 })
     }
 
@@ -152,21 +163,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: endAssignmentError.message }, { status: 500 })
       }
 
-      // Update occupancy for the old bed
-      const { data: oldBed, error: oldBedError } = await supabase
-        .from('beds')
-        .select('current_occupancy')
-        .eq('id', existingAssignment.bed_id)
-        .single()
-
-      if (!oldBedError && oldBed) {
-        await supabase
-          .from('beds')
-          .update({ 
-            current_occupancy: Math.max(0, oldBed.current_occupancy - 1)
-          })
-          .eq('id', existingAssignment.bed_id)
-      }
+      // Note: We no longer update current_occupancy as we count active assignments directly
     }
 
     // Create bed assignment
@@ -206,18 +203,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: assignmentError.message }, { status: 500 })
     }
 
-    // Update bed occupancy
-    const { error: bedUpdateError } = await supabase
-      .from('beds')
-      .update({ 
-        current_occupancy: bed.current_occupancy + 1
-      })
-      .eq('id', bed_id)
-
-    if (bedUpdateError) {
-      console.error('Error updating bed occupancy:', bedUpdateError)
-      // Don't fail the request, just log the error
-    }
+    // Note: We no longer update current_occupancy as we count active assignments directly
 
     return NextResponse.json(assignment, { status: 201 })
   } catch (error: any) {
@@ -317,21 +303,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Update bed occupancy (decrement)
-    const { data: bed, error: bedError } = await supabase
-      .from('beds')
-      .select('current_occupancy')
-      .eq('id', assignment.bed_id)
-      .single()
-
-    if (!bedError && bed) {
-      await supabase
-        .from('beds')
-        .update({ 
-          current_occupancy: Math.max(0, bed.current_occupancy - 1)
-        })
-        .eq('id', assignment.bed_id)
-    }
+    // Note: We no longer update current_occupancy as we count active assignments directly
 
     return NextResponse.json({ message: 'Bed assignment completed successfully', data })
   } catch (error: any) {

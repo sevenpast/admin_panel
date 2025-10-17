@@ -1,75 +1,85 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
-  PlusIcon,
-  EyeIcon,
-  PencilIcon,
-  TrashIcon,
-  XMarkIcon,
-  MagnifyingGlassIcon,
   UserIcon,
-  DocumentArrowDownIcon,
   ClockIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon
+  ChartBarIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline'
-import StaffManagementComponent from './StaffManagement'
-import ShiftsComponent from './Shifts'
+import StaffManagementComponent from '@/components/staff/StaffManagement'
 
-export default function StaffPage() {
-  const [activeTab, setActiveTab] = useState<'management' | 'shifts'>('management')
+const staffModules = [
+  {
+    title: 'Staff Management',
+    description: 'Manage staff members, roles, and permissions',
+    href: '/staff',
+    icon: UserIcon,
+    color: 'bg-blue-500'
+  },
+  {
+    title: 'Shifts',
+    description: 'Schedule and manage staff shifts and assignments',
+    href: '/staff/shifts',
+    icon: ClockIcon,
+    color: 'bg-green-500'
+  },
+  {
+    title: 'Hours Report',
+    description: 'View staff working hours and shift analysis',
+    href: '/staff/hours',
+    icon: ChartBarIcon,
+    color: 'bg-purple-500'
+  }
+]
+
+export default function StaffMainPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [searchTerm, setSearchTerm] = useState('')
 
-  const tabs = [
-    { id: 'management', name: 'Staff Management', icon: UserIcon },
-    { id: 'shifts', name: 'Shifts', icon: ClockIcon }
-  ]
+  const currentModule = staffModules[0] // Staff Management
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Main Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Staff</h1>
-        <p className="text-gray-600">Manage staff members and their shifts</p>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="h-5 w-5 mr-2" />
-                {tab.name}
-              </button>
-            )
-          })}
-        </nav>
+      {/* Description */}
+      <div>
+        <p className="text-gray-600">Manage staff members, shifts, and work assignments</p>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'management' && (
-        <StaffManagementComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
-      {activeTab === 'shifts' && (
-        <ShiftsComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
+      {/* Navigation Links */}
+      <div className="flex space-x-1 border-b border-gray-200">
+        <div className="bg-blue-100 text-blue-700 px-4 py-2 text-sm font-medium rounded-t-md flex items-center space-x-2">
+          <UserIcon className="h-4 w-4" />
+          <span>Staff Management</span>
+        </div>
+        {staffModules.slice(1).map((module) => {
+          const Icon = module.icon
+          return (
+            <Link
+              key={module.href}
+              href={module.href}
+              className="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm font-medium rounded-t-md hover:bg-gray-50 transition-colors flex items-center space-x-2"
+            >
+              <Icon className="h-4 w-4" />
+              <span>{module.title}</span>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Page Content */}
+      <StaffManagementComponent
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+      />
     </div>
   )
 }

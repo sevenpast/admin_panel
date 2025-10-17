@@ -1,69 +1,85 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
   EyeIcon,
   CakeIcon,
   UserGroupIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline'
-import KitchenOverviewComponent from './KitchenOverview'
-import KitchenManagementComponent from './KitchenManagement'
-import StaffOverviewComponent from './StaffOverview'
+import KitchenOverviewComponent from '@/components/meals/KitchenOverview'
 
-export default function MealsPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'management' | 'staff'>('overview')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+const mealModules = [
+  {
+    title: 'Kitchen Overview',
+    description: 'Real-time kitchen operations and meal delivery tracking',
+    href: '/meals',
+    icon: EyeIcon,
+    color: 'bg-blue-500'
+  },
+  {
+    title: 'Kitchen Management',
+    description: 'Create and schedule meals, manage menu planning',
+    href: '/meals/kitchen-management',
+    icon: CakeIcon,
+    color: 'bg-orange-500'
+  },
+  {
+    title: 'Staff Overview',
+    description: 'Kitchen staff scheduling and task assignments',
+    href: '/meals/staff-overview',
+    icon: UserGroupIcon,
+    color: 'bg-green-500'
+  }
+]
 
-  const tabs = [
-    { id: 'overview', name: 'Kitchen Overview', icon: EyeIcon },
-    { id: 'management', name: 'Kitchen Management', icon: CakeIcon },
-    { id: 'staff', name: 'Staff Overview', icon: UserGroupIcon }
-  ]
+export default function MealsMainPage() {
+  const [selectedDate, setSelectedDate] = useState('2025-10-11') // Set to a date with meals for testing
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const currentModule = mealModules[0] // Kitchen Overview
 
   return (
     <div className="space-y-6">
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="h-5 w-5 mr-2" />
-                {tab.name}
-              </button>
-            )
-          })}
-        </nav>
+      {/* Main Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Meals</h1>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'overview' && (
-        <KitchenOverviewComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
-      {activeTab === 'management' && (
-        <KitchenManagementComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
-      {activeTab === 'staff' && (
-        <StaffOverviewComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
+      {/* Description */}
+      <div>
+        <p className="text-gray-600">Manage kitchen operations, meal planning, and staff coordination</p>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="flex space-x-1 border-b border-gray-200">
+        <div className="bg-blue-100 text-blue-700 px-4 py-2 text-sm font-medium rounded-t-md flex items-center space-x-2">
+          <EyeIcon className="h-4 w-4" />
+          <span>Kitchen Overview</span>
+        </div>
+        {mealModules.slice(1).map((module) => {
+          const Icon = module.icon
+          return (
+            <Link
+              key={module.href}
+              href={module.href}
+              className="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm font-medium rounded-t-md hover:bg-gray-50 transition-colors flex items-center space-x-2"
+            >
+              <Icon className="h-4 w-4" />
+              <span>{module.title}</span>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Page Content */}
+      <KitchenOverviewComponent
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+      />
     </div>
   )
 }

@@ -11,9 +11,11 @@ import {
   CubeIcon,
   ClockIcon,
   BellIcon,
-  DocumentChartBarIcon
+  DocumentChartBarIcon,
+  BuildingStorefrontIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
-import { databaseService } from '@/lib/database-service'
+import { useDashboardStats } from '@/hooks/useApi'
 
 interface DashboardStats {
   guests: {
@@ -60,9 +62,10 @@ const dashboardCards = [
     icon: UsersIcon,
     color: 'bg-blue-500',
     getData: (stats: DashboardStats) => [
-      `${stats.guests.inHouse} in house`,
-      `${stats.guests.surfPackage} surf package`,
-      `${stats.guests.surfPackagePercentage}% with surf package`
+      `${stats.guests.total} total guests`,
+      `${stats.guests.inHouse} currently in house`,
+      `${stats.guests.surfPackage} with surf package`,
+      `${stats.guests.surfPackagePercentage}% surf package rate`
     ]
   },
   {
@@ -83,20 +86,21 @@ const dashboardCards = [
     icon: CakeIcon,
     color: 'bg-orange-500',
     getData: (stats: DashboardStats) => [
-      `${stats.meals.ordersToday} orders today`,
-      `Meat: ${stats.meals.meatCount}`,
-      `Vegetarian: ${stats.meals.vegetarianCount}`,
-      `Vegan: ${stats.meals.veganCount}`
+      `${stats.meals.ordersToday} total orders today`,
+      `Meat: ${stats.meals.meatCount} portions`,
+      `Vegetarian: ${stats.meals.vegetarianCount} portions`,
+      `Vegan: ${stats.meals.veganCount} portions`
     ]
   },
   {
     title: 'Events',
     href: '/events',
-    icon: CalendarIcon,
+    icon: SparklesIcon,
     color: 'bg-purple-500',
     getData: (stats: DashboardStats) => [
-      `${stats.events.today} activities today`,
-      `${stats.events.totalAttendance} total attendance`
+      `${stats.events.today} events (next 7 days)`,
+      `${stats.events.totalAttendance} total attendance`,
+      `Average: ${stats.events.today > 0 ? Math.round(stats.events.totalAttendance / stats.events.today) : 0} per event`
     ]
   },
   {
@@ -109,9 +113,9 @@ const dashboardCards = [
     ]
   },
   {
-    title: 'Inventory',
+    title: 'Rooms',
     href: '/inventory',
-    icon: CubeIcon,
+    icon: BuildingStorefrontIcon,
     color: 'bg-pink-500',
     getData: (stats: DashboardStats) => [
       `${stats.inventory.bedsOccupied}/${stats.inventory.bedsTotal} beds occupied`,
@@ -141,7 +145,7 @@ const dashboardCards = [
   {
     title: 'Calendar',
     href: '/calendar',
-    icon: DocumentChartBarIcon,
+    icon: CalendarIcon,
     color: 'bg-teal-500',
     getData: () => [
       'Overview info',
@@ -151,7 +155,11 @@ const dashboardCards = [
 ]
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats>({
+  // Use React Query for much better performance and caching
+  const { data: stats, isLoading: loading, error } = useDashboardStats()
+
+  // Fallback stats if data is not available
+  const fallbackStats: DashboardStats = {
     guests: { total: 0, inHouse: 0, surfPackage: 0, surfPackagePercentage: 0 },
     lessons: { today: 0, beginnerCount: 0, intermediateCount: 0, advancedCount: 0 },
     meals: { ordersToday: 0, meatCount: 0, vegetarianCount: 0, veganCount: 0, otherCount: 0 },
@@ -159,38 +167,22 @@ export default function Dashboard() {
     staff: { active: 0 },
     inventory: { bedsOccupied: 0, bedsTotal: 0, occupancyPercentage: 0, roomsCount: 0 },
     shifts: { today: 0 }
-  })
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    loadDashboardStats()
-  }, [])
-
-  const loadDashboardStats = async () => {
-    try {
-      const realStats = await databaseService.getDashboardStats()
-      setStats(realStats)
-    } catch (error) {
-      console.error('Error loading dashboard stats:', error)
-      // Fallback to empty stats if database fails
-      setStats({
-        guests: { total: 0, inHouse: 0, surfPackage: 0, surfPackagePercentage: 0 },
-        lessons: { today: 0, beginnerCount: 0, intermediateCount: 0, advancedCount: 0 },
-        meals: { ordersToday: 0, meatCount: 0, vegetarianCount: 0, veganCount: 0, otherCount: 0 },
-        events: { today: 0, totalAttendance: 0 },
-        staff: { active: 0 },
-        inventory: { bedsOccupied: 0, bedsTotal: 0, occupancyPercentage: 0, roomsCount: 0 },
-        shifts: { today: 0 }
-      })
-    } finally {
-      setLoading(false)
-    }
   }
+
+  const dashboardStats = stats || fallbackStats
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-lg">Loading dashboard...</div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-lg text-red-600">Error loading dashboard: {error.message}</div>
       </div>
     )
   }

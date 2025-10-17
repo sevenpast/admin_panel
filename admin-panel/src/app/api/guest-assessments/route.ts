@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const guestId = searchParams.get('guest_id')
     
-    const campId = await databaseService.getCurrentCampId()
+    // For now, use a fixed camp ID since we don't have a camps API
+    const campId = '7eaab5f8-5376-4f69-8c70-8f0f0ec89383'
 
     if (!guestId) {
       // If no guest_id provided, return empty array (for loading assessment questions)
@@ -57,7 +58,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Guest ID and answers are required' }, { status: 400 })
     }
 
-    const campId = await databaseService.getCurrentCampId()
+    // For now, use a fixed camp ID since we don't have a camps API
+    const campId = '7eaab5f8-5376-4f69-8c70-8f0f0ec89383'
 
     // Prepare data for batch insert/update
     const assessmentData = answers.map((answer: any) => ({

@@ -189,6 +189,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const includeTemplates = searchParams.get('include_templates') === 'true'
     const templatesOnly = searchParams.get('templates_only') === 'true'
+    const mealDate = searchParams.get('meal_date')
+    const mealType = searchParams.get('meal_type')
     
     let query = supabase
       .from('meals')
@@ -203,6 +205,16 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_template', false)
     }
     // If includeTemplates is true, return both regular meals and templates
+    
+    // Apply date filter if provided
+    if (mealDate) {
+      query = query.eq('meal_date', mealDate)
+    }
+    
+    // Apply meal type filter if provided
+    if (mealType) {
+      query = query.eq('meal_type', mealType)
+    }
     
     const { data: meals, error } = await query
 

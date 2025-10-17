@@ -1,30 +1,33 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { databaseService } from '@/lib/database-service'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient(supabaseUrl, supabaseKey)
+import { NextRequest } from 'next/server'
+import { createServiceRoleClient } from '@/lib/supabase/service'
+import { apiSuccess, apiError, ERROR_CODES, serverError } from '@/lib/api-helpers'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { lessonId, staffIds } = body
-    
+
     if (!lessonId) {
-      return NextResponse.json({ error: 'Lesson ID is required' }, { status: 400 })
+      return apiError('Lesson ID is required', ERROR_CODES.MISSING_REQUIRED_FIELD, 400)
     }
 
     if (!Array.isArray(staffIds)) {
-      return NextResponse.json({ error: 'Staff IDs must be an array' }, { status: 400 })
+      return apiError('Staff IDs must be an array', ERROR_CODES.INVALID_INPUT, 400)
     }
 
+    const supabase = createServiceRoleClient()
+
     // Get current camp ID
-    const campId = await databaseService.getCurrentCampId()
-    if (!campId) {
-      return NextResponse.json({ error: 'No camp ID available' }, { status: 500 })
+    const { data: campData, error: campError } = await supabase
+      .from('camps')
+      .select('id')
+      .eq('is_active', true)
+      .single()
+
+    if (campError || !campData) {
+      return apiError('No camp ID available', ERROR_CODES.INTERNAL_SERVER_ERROR, 500)
     }
+    const campId = campData.id
 
     // Remove existing instructors for this lesson
     const { error: deleteError } = await supabase
@@ -35,12 +38,12 @@ export async function POST(request: NextRequest) {
 
     if (deleteError) {
       console.error('Error removing existing instructors:', deleteError)
-      return NextResponse.json({ error: 'Failed to remove existing instructors' }, { status: 500 })
+      return apiError('Failed to remove existing instructors', ERROR_CODES.DATABASE_ERROR, 500)
     }
 
     // Add new instructors
     if (staffIds.length > 0) {
-      const instructorAssignments = staffIds.map(staffId => ({
+      const instructorAssignments = staffIds.map((staffId: string) => ({
         lesson_id: lessonId,
         staff_id: staffId,
         camp_id: campId
@@ -52,14 +55,14 @@ export async function POST(request: NextRequest) {
 
       if (insertError) {
         console.error('Error assigning instructors:', insertError)
-        return NextResponse.json({ error: 'Failed to assign instructors' }, { status: 500 })
+        return apiError('Failed to assign instructors', ERROR_CODES.DATABASE_ERROR, 500)
       }
     }
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
+    return apiSuccess({ message: 'Instructors assigned successfully' })
+  } catch (error: any) {
     console.error('Error assigning instructors:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return serverError(error.message)
   }
 }
 

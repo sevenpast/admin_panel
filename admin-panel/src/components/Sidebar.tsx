@@ -12,13 +12,13 @@ import {
   UserGroupIcon,
   CubeIcon,
   BellIcon,
-  ClockIcon,
   DocumentChartBarIcon,
   CogIcon,
   ArrowRightOnRectangleIcon,
   ChevronRightIcon,
   ChevronDownIcon,
-  BuildingStorefrontIcon
+  BuildingStorefrontIcon,
+  SparklesIcon
 } from '@heroicons/react/24/outline'
 
 const navigationItems = [
@@ -28,7 +28,7 @@ const navigationItems = [
   { name: 'Meals', href: '/meals', icon: CakeIcon },
   { name: 'Events', href: '/events', icon: CalendarIcon },
   { name: 'Staff', href: '/staff', icon: UserGroupIcon },
-  { name: 'Inventory', href: '/inventory', icon: CubeIcon },
+  { name: 'Rooms', href: '/inventory', icon: BuildingStorefrontIcon },
   { name: 'Alert Management', href: '/alerts', icon: BellIcon },
   { name: 'Calendar', href: '/calendar', icon: CalendarIcon },
   { name: 'Reports', href: '/reports', icon: DocumentChartBarIcon },
@@ -37,7 +37,7 @@ const navigationItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isCollapsed, setisCollapsed] = useState(false)
 
   return (
     <div className={`bg-gray-900 text-white transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
@@ -88,7 +88,7 @@ export default function Sidebar() {
             onClick={() => {
               if (confirm('Are you sure you want to logout?')) {
                 // Implement logout logic
-                alert('Logout functionality will be implemented')
+                error('Logout functionality will be implemented')
               }
             }}
             className="flex items-center w-full px-3 py-2 text-sm font-medium text-gray-300 rounded-md hover:bg-gray-800 hover:text-white transition-colors"

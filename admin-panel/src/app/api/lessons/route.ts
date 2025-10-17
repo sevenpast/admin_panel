@@ -81,10 +81,15 @@ export async function POST(request: NextRequest) {
     // Generate lesson_id
     const lessonId = `L-${Math.random().toString(36).substr(2, 10).toUpperCase()}`
 
+    // Transform time fields to full timestamps
+    const { start_at, end_at, lesson_date, ...otherFields } = body
+
     const lessonData = {
-      ...body,
+      ...otherFields,
       camp_id: campId,
-      lesson_id: lessonId
+      lesson_id: lessonId,
+      start_at: `${lesson_date}T${start_at}:00.000Z`,
+      end_at: `${lesson_date}T${end_at}:00.000Z`
     }
 
     // Create lesson directly with service role client
@@ -95,7 +100,8 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (error) {
-      console.error('Error creating lesson:', error)
+      console.error('Error creating lesson:', JSON.stringify(error, null, 2))
+      console.error('Lesson data being inserted:', JSON.stringify(lessonData, null, 2))
       return apiError('Failed to create lesson', ERROR_CODES.DATABASE_ERROR, 500)
     }
 
@@ -141,11 +147,13 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id')
     const bulkIds = searchParams.get('bulk_ids')
 
+    const supabase = createServiceRoleClient()
+
     // Handle bulk delete by IDs (multi-select)
     if (bulkIds) {
       try {
         const ids = JSON.parse(bulkIds)
-        
+
         if (!Array.isArray(ids) || ids.length === 0) {
           return apiError('Invalid lesson IDs array', ERROR_CODES.INVALID_INPUT, 400)
         }
@@ -163,7 +171,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         console.log(`Successfully deleted ${ids.length} lessons by IDs`)
-        return apiSuccess({ 
+        return apiSuccess({
           deletedCount: ids.length,
           message: `Successfully deleted ${ids.length} lessons`
         })
@@ -177,18 +185,18 @@ export async function DELETE(request: NextRequest) {
     if (!id) {
       return apiError('Lesson ID is required', ERROR_CODES.MISSING_REQUIRED_FIELD, 400)
     }
-    
+
     // Delete lesson directly with service role client
     const { error } = await supabase
       .from('lessons')
       .delete()
       .eq('id', id)
-    
+
     if (error) {
       console.error('Error deleting lesson:', error)
       return apiError('Failed to delete lesson', ERROR_CODES.DATABASE_ERROR, 500)
     }
-    
+
     return apiSuccess({ message: 'Lesson deleted successfully' })
   } catch (error: any) {
     console.error('Error deleting lesson:', error)

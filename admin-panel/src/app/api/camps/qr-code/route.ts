@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const format = searchParams.get('format') || 'png'
 
     // Create registration URL with camp ID
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
     const registrationUrl = `${baseUrl}/register?camp_id=${campId}`
 
     // Generate QR code
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const { camp_id = '00000000-0000-0000-0000-000000000001', size = 512, format = 'png' } = body
 
     // Create registration URL
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3001'
     const registrationUrl = `${baseUrl}/register?camp_id=${camp_id}`
 
     // Generate QR code as data URL for inline display

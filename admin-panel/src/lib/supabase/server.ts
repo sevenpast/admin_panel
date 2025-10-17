@@ -5,8 +5,8 @@ import { cookies } from 'next/headers'
 // API Routes, and Route Handlers in Next.js.
 // It reads the user's session from the cookies and acts on their behalf.
 
-export const createClient = () => {
-  const cookieStore = cookies()
+export const createClient = async () => {
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

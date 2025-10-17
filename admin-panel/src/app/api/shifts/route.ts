@@ -1,9 +1,9 @@
 import { NextRequest } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceRoleClient } from '@/lib/supabase/service';
 import { apiSuccess, apiError } from '@/lib/api-helpers';
 
 export async function GET(request: NextRequest) {
-  const supabase = createClient();
+  const supabase = createServiceRoleClient();
   try {
     const { searchParams } = new URL(request.url);
     const campId = searchParams.get('camp_id');
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient();
+  const supabase = createServiceRoleClient();
   try {
     const body = await request.json();
     
@@ -113,9 +113,8 @@ export async function POST(request: NextRequest) {
     // Validate staff is active
     const { data: staffData, error: staffError } = await supabase
       .from('staff')
-      .select('is_active, labels, name, staff_id')
+      .select('is_active, labels, name, staff_id, camp_id')
       .eq('id', staff_id)
-      .eq('camp_id', campId)
       .maybeSingle();
 
     if (staffError || !staffData) {
@@ -141,7 +140,7 @@ export async function POST(request: NextRequest) {
       return apiError('Conflict: Overlap with existing shift', 'SHIFT_CONFLICT', 409);
     }
 
-    // Validate no overnight shifts
+    // Validate no overnight shifts (allow shifts that end before midnight)
     const startDate = new Date(start_at).toDateString();
     const endDate = new Date(end_at).toDateString();
     if (startDate !== endDate) {

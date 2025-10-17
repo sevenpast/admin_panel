@@ -1,73 +1,74 @@
 'use client'
 
-import { useState } from 'react'
-import { HomeIcon, CubeIcon, ChartBarIcon } from '@heroicons/react/24/outline'
-import BedInventory from './BedInventory'
-import MaterialInventory from './MaterialInventory'
-import AnalyseComponent from './Analyse'
+import Link from 'next/link'
+import {
+  HomeIcon,
+  ChartBarIcon,
+  CubeIcon,
+  EyeIcon
+} from '@heroicons/react/24/outline'
+import BedInventoryComponent from '@/components/inventory/BedInventory'
 
-export default function InventoryPage() {
-  const [activeTab, setActiveTab] = useState<'beds' | 'equipment' | 'analyse'>('beds')
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+const inventoryModules = [
+  {
+    title: 'Bed Inventory',
+    description: 'Manage room assignments and bed occupancy',
+    href: '/inventory/bed-inventory',
+    icon: HomeIcon,
+    color: 'bg-blue-500'
+  },
+  {
+    title: 'Analysis',
+    description: 'Occupancy analytics and room utilization reports',
+    href: '/inventory/analysis',
+    icon: ChartBarIcon,
+    color: 'bg-green-500'
+  },
+  {
+    title: 'Material Inventory',
+    description: 'Track room equipment and material supplies',
+    href: '/inventory/material-inventory',
+    icon: CubeIcon,
+    color: 'bg-purple-500'
+  }
+]
 
+export default function InventoryMainPage() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
-          <p className="text-gray-600">Manage beds, rooms, and equipment</p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200 mb-8">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('beds')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'beds'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <HomeIcon className="h-5 w-5 inline mr-2" />
-              Bed Inventory
-            </button>
-            <button
-              onClick={() => setActiveTab('equipment')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'equipment'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <CubeIcon className="h-5 w-5 inline mr-2" />
-              Material Inventory
-            </button>
-            <button
-              onClick={() => setActiveTab('analyse')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'analyse'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <ChartBarIcon className="h-5 w-5 inline mr-2" />
-              Analyse
-            </button>
-          </nav>
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === 'beds' && <BedInventory />}
-        {activeTab === 'equipment' && <MaterialInventory />}
-        {activeTab === 'analyse' && (
-          <AnalyseComponent 
-            selectedDate={selectedDate} 
-            onDateChange={setSelectedDate} 
-          />
-        )}
+    <div className="space-y-6">
+      {/* Main Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Rooms</h1>
       </div>
+
+      {/* Description */}
+      <div>
+        <p className="text-gray-600">Manage room assignments, bed inventory, and material supplies</p>
+      </div>
+
+      {/* Navigation Links */}
+      <div className="flex space-x-1 border-b border-gray-200">
+        <div className="bg-blue-100 text-blue-700 px-4 py-2 text-sm font-medium rounded-t-md flex items-center space-x-2">
+          <HomeIcon className="h-4 w-4" />
+          <span>Bed Inventory</span>
+        </div>
+        {inventoryModules.slice(1).map((module) => {
+          const Icon = module.icon
+          return (
+            <Link
+              key={module.href}
+              href={module.href}
+              className="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm font-medium rounded-t-md hover:bg-gray-50 transition-colors flex items-center space-x-2"
+            >
+              <Icon className="h-4 w-4" />
+              <span>{module.title}</span>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* Page Content */}
+      <BedInventoryComponent />
     </div>
   )
 }

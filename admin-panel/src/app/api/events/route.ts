@@ -1,10 +1,10 @@
 import { NextRequest } from 'next/server';
-import { createSupabaseServiceClient } from '@/lib/supabase-server';
+import { createServiceRoleClient } from '@/lib/supabase/service';
 import { apiSuccess, apiError, ERROR_CODES, serverError } from '@/lib/api-helpers';
 
 // GET - Fetch all events
 export async function GET(request: NextRequest) {
-  const supabase = await createSupabaseServiceClient();
+  const supabase = createServiceRoleClient();
   try {
     console.log('Fetching events from database...');
     
@@ -28,18 +28,41 @@ export async function GET(request: NextRequest) {
 
 // POST - Create new event
 export async function POST(request: NextRequest) {
-  const supabase = await createSupabaseServiceClient();
+  const supabase = createServiceRoleClient();
   try {
     const body = await request.json();
 
+    // Get current camp ID
+    const { data: campData, error: campError } = await supabase
+      .from('camps')
+      .select('id')
+      .eq('is_active', true)
+      .single();
+
+    if (campError || !campData) {
+      console.error('Error getting camp ID:', campError);
+      return apiError('No active camp found', ERROR_CODES.INTERNAL_SERVER_ERROR, 500);
+    }
+
+    // Generate event_id
+    const eventId = `E-${Math.random().toString(36).substr(2, 10).toUpperCase()}`;
+
+    // Add required fields
+    const eventData = {
+      ...body,
+      camp_id: campData.id,
+      event_id: eventId
+    };
+
     const { data: event, error } = await supabase
       .from('events')
-      .insert([body])
+      .insert([eventData])
       .select()
       .single();
 
     if (error) {
       console.error('Error creating event:', error);
+      console.error('Event data being inserted:', JSON.stringify(eventData, null, 2));
       return apiError('Failed to create event', ERROR_CODES.DATABASE_ERROR, 500);
     }
 
@@ -52,7 +75,7 @@ export async function POST(request: NextRequest) {
 
 // PUT - Update event
 export async function PUT(request: NextRequest) {
-  const supabase = await createSupabaseServiceClient();
+  const supabase = createServiceRoleClient();
   try {
     const body = await request.json();
     const { id, ...updateData } = body;
@@ -82,7 +105,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Delete event(s)
 export async function DELETE(request: NextRequest) {
-  const supabase = await createSupabaseServiceClient();
+  const supabase = createServiceRoleClient();
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

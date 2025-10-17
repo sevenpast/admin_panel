@@ -105,33 +105,53 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cannot assign inactive equipment' }, { status: 400 })
     }
 
-    if (equipment.status !== 'available') {
-      return NextResponse.json({ error: 'Equipment is not available' }, { status: 400 })
+    // Allow equipment to be assigned to multiple guests regardless of current assignment status
+    // Only prevent assignment if equipment is in maintenance or retired
+    if (equipment.status === 'maintenance' || equipment.status === 'retired') {
+      return NextResponse.json({ error: 'Equipment is not available for assignment (in maintenance or retired)' }, { status: 400 })
     }
 
-    // Check if guest already has equipment of the same category
-    const { data: existingAssignments, error: existingError } = await supabase
+    // Equipment with status 'assigned' or 'available' can be shared between multiple guests
+    // This is per user stories: equipment should be assignable to multiple guests
+
+    // Check if this specific equipment is already assigned to this guest
+    const { data: existingAssignment, error: existingError } = await supabase
+      .from('equipment_assignments')
+      .select('id')
+      .eq('guest_id', guest_id)
+      .eq('equipment_id', equipment_id)
+      .eq('status', 'active')
+      .single()
+
+    if (existingError && existingError.code !== 'PGRST116') {
+      return NextResponse.json({ error: existingError.message }, { status: 500 })
+    }
+
+    if (existingAssignment) {
+      return NextResponse.json({ error: 'This equipment is already assigned to this guest' }, { status: 400 })
+    }
+
+    // Per user stories: Equipment can be assigned to multiple guests
+    // Remove any category-based restrictions that might exist
+    // Check if guest already has equipment of the same category (but allow multiple)
+    const { data: categoryAssignments, error: categoryError } = await supabase
       .from('equipment_assignments')
       .select(`
         id,
-        equipment (
-          category
-        )
+        equipment (category)
       `)
       .eq('guest_id', guest_id)
       .eq('status', 'active')
 
-    if (existingError) {
-      return NextResponse.json({ error: existingError.message }, { status: 500 })
+    if (categoryError && categoryError.code !== 'PGRST116') {
+      console.log('Category check error (non-fatal):', categoryError)
     }
 
-    // Check if guest already has equipment of the same category
-    const hasSameCategory = existingAssignments?.some(assignment => 
-      assignment.equipment?.category === equipment.category
-    )
-
-    if (hasSameCategory) {
-      return NextResponse.json({ error: `Guest already has ${equipment.category} assigned` }, { status: 400 })
+    // Log existing assignments for debugging
+    if (categoryAssignments && categoryAssignments.length > 0) {
+      console.log(`Guest ${guest_id} already has ${categoryAssignments.length} active equipment assignments`)
+      console.log('Existing categories:', categoryAssignments.map(a => a.equipment?.category))
+      console.log('Per user stories: Multiple assignments of same category are allowed')
     }
 
     // Create equipment assignment
@@ -166,18 +186,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: assignmentError.message }, { status: 500 })
     }
 
-    // Update equipment status
-    const { error: updateEquipmentError } = await supabase
-      .from('equipment')
-      .update({ 
-        status: 'assigned',
-        currently_assigned_to: guest_id
-      })
-      .eq('id', equipment_id)
-
-    if (updateEquipmentError) {
-      console.error('Error updating equipment status:', updateEquipmentError)
-    }
+    // Equipment can be assigned to multiple guests, so we don't update its status
+    // Only update if equipment becomes unavailable due to maintenance/damage
 
     return NextResponse.json(assignment, { status: 201 })
   } catch (error: any) {
@@ -216,14 +226,23 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Update equipment status
-    await supabase
-      .from('equipment')
-      .update({ 
-        status: 'available',
-        currently_assigned_to: null
-      })
-      .eq('id', assignment.equipment_id)
+    // Check if there are other active assignments for this equipment
+    const { data: otherAssignments, error: checkError } = await supabase
+      .from('equipment_assignments')
+      .select('id')
+      .eq('equipment_id', assignment.equipment_id)
+      .eq('status', 'active')
+
+    // Only update equipment status if no other active assignments exist
+    if (!checkError && (!otherAssignments || otherAssignments.length === 0)) {
+      await supabase
+        .from('equipment')
+        .update({
+          status: 'available',
+          currently_assigned_to: null
+        })
+        .eq('id', assignment.equipment_id)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {

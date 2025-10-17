@@ -25,10 +25,19 @@ export async function GET(request: NextRequest) {
     }
     campId = camps.id
 
-    // Build query
+    // Build query with room name
     let query = supabase
       .from('beds')
-      .select('id, bed_id, identifier, bed_type, capacity')
+      .select(`
+        id,
+        bed_id,
+        identifier,
+        bed_type,
+        capacity,
+        rooms (
+          name
+        )
+      `)
       .eq('camp_id', campId)
       .eq('is_active', true)
 
@@ -66,7 +75,10 @@ export async function GET(request: NextRequest) {
       if (isAvailable) {
         availableBeds.push({
           ...bed,
+          room_name: bed.rooms?.name || 'Unknown Room',
+          bed_name: bed.identifier || `Bed ${bed.bed_id}`,
           current_occupancy: occupancy,
+          available_spots: bed.capacity - occupancy,
           is_available: true
         })
       }

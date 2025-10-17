@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   UserPlusIcon,
@@ -30,7 +30,7 @@ interface RegistrationData {
   notes: string
 }
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   const searchParams = useSearchParams()
   const campId = searchParams.get('camp_id')
 
@@ -281,7 +281,7 @@ export default function RegisterPage() {
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Ihr vollständiger Name"
+                  placeholder="Your full name"
                 />
               </div>
             </div>
@@ -442,5 +442,26 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div className="text-center">
+              <ArrowPathIcon className="mx-auto h-12 w-12 text-blue-600 animate-spin" />
+              <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Loading...
+              </h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <RegisterPageContent />
+    </Suspense>
   )
 }

@@ -1,86 +1,95 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import {
-  EyeIcon,
-  PencilIcon,
-  TrashIcon,
-  DocumentDuplicateIcon,
-  GlobeAltIcon,
-  PlusIcon,
-  XMarkIcon,
-  CheckIcon,
   UserGroupIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  UserPlusIcon,
   AcademicCapIcon,
-  Cog6ToothIcon
+  CubeIcon,
+  Cog6ToothIcon,
+  PlusIcon,
+  MagnifyingGlassIcon,
+  FunnelIcon
 } from '@heroicons/react/24/outline'
-import PackageGuestsComponent from './PackageGuests'
-import LessonManagementComponent from './LessonManagement'
-import AssessmentQuestionsComponent from './AssessmentQuestions'
+import PackageGuestsComponent from '@/components/lessons/PackageGuests'
 
-export default function SurfLessonsPage() {
-  const [activeTab, setActiveTab] = useState<'guests' | 'lessons' | 'questions'>('guests')
+const lessonModules = [
+  {
+    title: 'Package Guests',
+    description: 'Manage guests with surf packages and lesson assignments',
+    href: '/lessons/package-guests',
+    icon: UserGroupIcon,
+    color: 'bg-blue-500'
+  },
+  {
+    title: 'Lesson Management',
+    description: 'Create, schedule, and manage surf lessons',
+    href: '/lessons/lesson-management',
+    icon: AcademicCapIcon,
+    color: 'bg-green-500'
+  },
+  {
+    title: 'Equipment',
+    description: 'Manage surfboards, wetsuits, and other equipment',
+    href: '/lessons/equipment',
+    icon: CubeIcon,
+    color: 'bg-purple-500'
+  },
+  {
+    title: 'Assessment Questions',
+    description: 'Manage skill assessment questions and evaluations',
+    href: '/lessons/assessment-questions',
+    icon: Cog6ToothIcon,
+    color: 'bg-orange-500'
+  }
+]
+
+export default function LessonsMainPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
+  const [searchTerm, setSearchTerm] = useState('')
 
-  const tabs = [
-    { id: 'guests', name: 'Package Guests', icon: UserGroupIcon },
-    { id: 'lessons', name: 'Lesson Management', icon: AcademicCapIcon },
-    { id: 'questions', name: 'Assessment Questions', icon: Cog6ToothIcon }
-  ]
+  const currentModule = lessonModules[0] // Package Guests
+  const showAddButton = true // Package Guests doesn't need add button, but others do
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Main Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Surf Lessons</h1>
-        <p className="text-gray-600">Manage surf lessons, guests, and assessments</p>
+        <h1 className="text-3xl font-bold text-gray-900">Lessons</h1>
       </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <Icon className="h-5 w-5 mr-2" />
-                {tab.name}
-              </button>
-            )
-          })}
-        </nav>
+      {/* Description */}
+      <div>
+        <p className="text-gray-600">Manage guests, lessons and equipment</p>
       </div>
 
-      {/* Tab Content */}
-      {activeTab === 'guests' && (
-        <PackageGuestsComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
-      {activeTab === 'lessons' && (
-        <LessonManagementComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
-      {activeTab === 'questions' && (
-        <AssessmentQuestionsComponent 
-          selectedDate={selectedDate} 
-          onDateChange={setSelectedDate} 
-        />
-      )}
+      {/* Navigation Links */}
+      <div className="flex space-x-1 border-b border-gray-200">
+        <div className="bg-blue-100 text-blue-700 px-4 py-2 text-sm font-medium rounded-t-md flex items-center space-x-2">
+          <UserGroupIcon className="h-4 w-4" />
+          <span>Package Guests</span>
+        </div>
+        {lessonModules.slice(1).map((module) => {
+          const Icon = module.icon
+          return (
+            <Link
+              key={module.href}
+              href={module.href}
+              className="text-gray-500 hover:text-gray-700 px-4 py-2 text-sm font-medium rounded-t-md hover:bg-gray-50 transition-colors flex items-center space-x-2"
+            >
+              <Icon className="h-4 w-4" />
+              <span>{module.title}</span>
+            </Link>
+          )
+        })}
+      </div>
+
+
+      {/* Page Content */}
+      <PackageGuestsComponent
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
+      />
     </div>
   )
 }
